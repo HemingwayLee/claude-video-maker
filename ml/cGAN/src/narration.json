@@ -1,0 +1,124 @@
+{
+  "_comment": "The whole voiceover script. Each scene is a list of lines; each line is one caption and one voice clip. `speech` (optional) is what the voice says when it should differ from the caption. `pad` (optional) adds extra seconds after the line so an animation can finish. Scene ids must match SCENE_COMPONENTS in src/CganVideo.tsx.",
+  "scenes": [
+    {
+      "id": "intro",
+      "title": "Intro",
+      "lines": [
+        { "text": "A GAN can invent new faces. But which face? You get whatever comes out.", "pad": 0.6 },
+        { "text": "A conditional GAN, or cGAN, lets you ask for what you want.", "speech": "A conditional GAN, or C GAN, lets you ask for what you want." },
+        { "text": "It was proposed in 2014 by Mehdi Mirza and Simon Osindero, just months after the original GAN.", "pad": 0.8 }
+      ]
+    },
+    {
+      "id": "problem",
+      "title": "The problem: no control",
+      "lines": [
+        { "text": "A normal generator takes only random noise z.", "speech": "A normal generator takes only random noise, zee.", "pad": 0.3 },
+        { "text": "Say you want a face with glasses. All you can do is draw new noise, again and again, and hope.", "pad": 1.2 },
+        { "text": "The generator has no input for “glasses”. The noise decides everything.", "pad": 0.8 }
+      ]
+    },
+    {
+      "id": "idea",
+      "title": "The idea: add a condition",
+      "lines": [
+        { "text": "The fix is simple. Give both networks one extra input: the condition, y.", "speech": "The fix is simple. Give both networks one extra input: the condition, why.", "pad": 0.4 },
+        { "text": "y can be a class label, like “glasses”, a digit, or a word. Later we'll see it can even be a whole image.", "speech": "Why can be a class label, like glasses, a digit, or a word. Later we'll see it can even be a whole image.", "pad": 0.6 },
+        { "text": "Back to the forger: now a client orders a specific note, a twenty, and the detective checks whether it really looks like a real twenty.", "pad": 1 }
+      ]
+    },
+    {
+      "id": "architecture",
+      "title": "The architecture",
+      "lines": [
+        { "text": "The generator now takes noise z and the condition y, and makes a sample G(z | y).", "speech": "The generator now takes noise zee and the condition why, and makes a sample, G of zee given why.", "pad": 0.4 },
+        { "text": "The training set provides real pairs: an image together with its correct label.", "pad": 0.4 },
+        { "text": "The discriminator sees an image and a label, and answers: is this a real image of that label?", "pad": 0.6 },
+        { "text": "Everything else is the same GAN game, played separately for every value of y.", "speech": "Everything else is the same GAN game, played separately for every value of why.", "pad": 1 }
+      ]
+    },
+    {
+      "id": "feeding",
+      "title": "Feeding in the condition",
+      "lines": [
+        { "text": "How do you feed a label into a network? The simplest way is a one-hot vector: all zeros, with a one for the chosen class.", "pad": 0.6 },
+        { "text": "For the generator, the one-hot vector is joined to the noise vector, end to end.", "pad": 0.6 },
+        { "text": "For an image discriminator, the label can be stretched into extra image channels, one plane per class.", "pad": 0.8 },
+        { "text": "Modern models often use a learned label embedding instead, or the projection discriminator, which compares image features with the label embedding.", "pad": 1 }
+      ]
+    },
+    {
+      "id": "match",
+      "title": "Two ways to be fake",
+      "lines": [
+        { "text": "The condition gives the discriminator a second job.", "pad": 0.3 },
+        { "text": "It must reject images that look fake…", "pad": 0.6 },
+        { "text": "…and also images that look real but don't match their label.", "pad": 0.8 },
+        { "text": "So the generator can't ignore y. A perfect face without glasses still fails when the label says “glasses”.", "speech": "So the generator can't ignore why. A perfect face without glasses still fails, when the label says glasses.", "pad": 1 }
+      ]
+    },
+    {
+      "id": "objective",
+      "title": "The objective",
+      "lines": [
+        { "text": "The cGAN objective is the GAN objective, with every D and G conditioned on y.", "speech": "The C GAN objective is the GAN objective, with every D and G conditioned on why.", "pad": 0.6 },
+        { "text": "D maximizes it: real pairs toward one, generated pairs toward zero.", "pad": 0.4 },
+        { "text": "G minimizes it, for whatever label it is asked to draw.", "pad": 0.6 },
+        { "text": "If training succeeds, G's output for each label matches the real data for that label.", "pad": 1.2 }
+      ]
+    },
+    {
+      "id": "training",
+      "title": "Training",
+      "lines": [
+        { "text": "Training alternates, just like a regular GAN.", "pad": 0.2 },
+        { "text": "Train D on real images with their true labels, and on fakes made for randomly chosen labels.", "pad": 0.8 },
+        { "text": "Then train G: pick labels, generate, and push D to say “real” for those same labels.", "pad": 0.8 },
+        { "text": "The label always travels with its image. That's the whole trick.", "pad": 1 }
+      ]
+    },
+    {
+      "id": "demo",
+      "title": "A real cGAN, learning",
+      "lines": [
+        { "text": "Here is a real cGAN, trained by the code in this project, on numbers with three classes: A, B and C.", "speech": "Here is a real C GAN, trained by the code in this project, on numbers with three classes: A, B, and C." },
+        { "text": "Each class is its own bump. At the start, the generator ignores the label: all three outputs sit in the same spot.", "pad": 0.6 },
+        { "text": "As training runs, each label's samples move to their own bump.", "pad": 3 },
+        { "text": "The blue curve is D for each label: about one half where that class lives…", "pad": 0.6 },
+        { "text": "…and near zero where other classes live. A perfect class C value labeled A is called fake.", "pad": 1 },
+        { "text": "Now we can choose: ask for A, B or C, and the same noise lands in the right place.", "pad": 2.5 }
+      ]
+    },
+    {
+      "id": "control",
+      "title": "Noise vs. condition",
+      "lines": [
+        { "text": "With faces, the roles split cleanly.", "pad": 0.3 },
+        { "text": "Keep y fixed and change z: you get different faces of the same kind.", "speech": "Keep why fixed, and change zee: you get different faces of the same kind.", "pad": 0.8 },
+        { "text": "Keep z fixed and change y: the same face, with the attribute you asked for.", "speech": "Keep zee fixed, and change why: the same face, with the attribute you asked for.", "pad": 0.8 },
+        { "text": "The condition controls what you asked for; the noise fills in everything else.", "pad": 1.2 }
+      ]
+    },
+    {
+      "id": "uses",
+      "title": "What the condition can be",
+      "lines": [
+        { "text": "The condition doesn't have to be a single label.", "pad": 0.2 },
+        { "text": "A class: BigGAN generates any of 1,000 ImageNet categories on demand.", "speech": "A class: Big GAN generates any of a thousand ImageNet categories, on demand.", "pad": 0.4 },
+        { "text": "A whole image: Pix2Pix turns sketches into photos, or maps into satellite views.", "speech": "A whole image: Pix to Pix turns sketches into photos, or maps into satellite views.", "pad": 0.4 },
+        { "text": "A low-resolution image: super-resolution GANs fill in the missing detail.", "pad": 0.4 },
+        { "text": "Or a sentence: early text-to-image GANs drew birds and flowers from descriptions.", "pad": 1 }
+      ]
+    },
+    {
+      "id": "recap",
+      "title": "Recap",
+      "lines": [
+        { "text": "So: a cGAN is a GAN where both players also see the condition y.", "speech": "So: a C GAN is a GAN where both players also see the condition, why." },
+        { "text": "The discriminator judges whether the image is real and whether it matches y.", "speech": "The discriminator judges whether the image is real, and whether it matches why.", "pad": 0.4 },
+        { "text": "And the generator learns to make exactly what you ask for.", "pad": 2 }
+      ]
+    }
+  ]
+}

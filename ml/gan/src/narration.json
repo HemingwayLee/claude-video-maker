@@ -1,0 +1,143 @@
+{
+  "_comment": "The whole voiceover script. Each scene is a list of lines; each line is one caption and one voice clip. `speech` (optional) is what the voice says when it should differ from the caption. `pad` (optional) adds extra seconds after the line so an animation can finish. Scene ids must match SCENE_COMPONENTS in src/GanVideo.tsx.",
+  "scenes": [
+    {
+      "id": "intro",
+      "title": "Intro",
+      "lines": [
+        { "text": "Imagine a computer that can invent faces of people who have never existed.", "pad": 0.6 },
+        { "text": "That is what a generative adversarial network, or GAN, can do." },
+        { "text": "Its trick: two neural networks that compete against each other.", "pad": 0.8 }
+      ]
+    },
+    {
+      "id": "generative",
+      "title": "Classify vs. generate",
+      "lines": [
+        { "text": "Most neural networks you meet are classifiers: an image goes in, a label comes out.", "pad": 0.4 },
+        { "text": "A generative model runs the other way: random numbers go in, brand-new data comes out.", "pad": 0.4 },
+        { "text": "The goal is new samples that look like they came from the training data." },
+        { "text": "But how do you score a made-up picture? There is no right answer to compare it with." },
+        { "text": "The GAN's answer: train a second network to be the judge.", "pad": 0.6 }
+      ]
+    },
+    {
+      "id": "analogy",
+      "title": "A forger and a detective",
+      "lines": [
+        { "text": "Think of a forger making fake banknotes, and a detective trying to catch them." },
+        { "text": "At first the fakes are terrible, and the detective spots every one.", "pad": 0.4 },
+        { "text": "The forger learns from each failure, and the fakes get better." },
+        { "text": "So the detective has to get sharper too." },
+        { "text": "Each pushes the other, until the fakes can't be told apart from real money.", "pad": 1 }
+      ]
+    },
+    {
+      "id": "architecture",
+      "title": "The architecture",
+      "lines": [
+        { "text": "In a GAN, the forger is the generator, G, and the detective is the discriminator, D." },
+        { "text": "The generator takes a random noise vector z, and turns it into a fake sample, G(z).", "speech": "The generator takes a random noise vector, zee, and turns it into a fake sample, G of zee.", "pad": 0.4 },
+        { "text": "The discriminator is shown real samples from the training set, and fakes from the generator.", "pad": 0.4 },
+        { "text": "For each one, it outputs a single number: the probability that the input is real.", "pad": 0.4 },
+        { "text": "That verdict is the generator's only teacher. It never sees a real image itself.", "pad": 1 }
+      ]
+    },
+    {
+      "id": "generator",
+      "title": "Inside the generator",
+      "lines": [
+        { "text": "The generator's input is just noise: for example, 100 random numbers from a bell curve.", "speech": "The generator's input is just noise: for example, a hundred random numbers from a bell curve." },
+        { "text": "Layer by layer, transposed convolutions grow it into an image, doubling its size each step.", "pad": 1 },
+        { "text": "Every z gives a different output. The space of all z's is called the latent space.", "speech": "Every zee gives a different output. The space of all zees is called the latent space.", "pad": 0.4 },
+        { "text": "Move smoothly from one z to another, and the output changes smoothly too.", "speech": "Move smoothly from one zee to another, and the output changes smoothly too.", "pad": 2.5 }
+      ]
+    },
+    {
+      "id": "discriminator",
+      "title": "Inside the discriminator",
+      "lines": [
+        { "text": "The discriminator is an ordinary classifier, usually a CNN." },
+        { "text": "It shrinks the image, layer by layer, down to a single number.", "pad": 0.6 },
+        { "text": "A sigmoid squashes that number into the range 0 to 1: near 1 means real, near 0 means fake.", "speech": "A sigmoid squashes that number into the range zero to one: near one means real, near zero means fake.", "pad": 0.6 },
+        { "text": "The twist: its opponent keeps getting better, so its job never gets easier.", "pad": 0.6 }
+      ]
+    },
+    {
+      "id": "objective",
+      "title": "The minimax game",
+      "lines": [
+        { "text": "The contest is written as a single value function, V of D and G.", "pad": 0.4 },
+        { "text": "The first term rewards D for scoring real data close to 1.", "speech": "The first term rewards D for scoring real data close to one." },
+        { "text": "The second term rewards D for scoring the fakes close to 0.", "speech": "The second term rewards D for scoring the fakes close to zero." },
+        { "text": "D tries to make V as large as possible. G tries to make it small, by pushing D(G(z)) toward 1.", "speech": "D tries to make V as large as possible. G tries to make it small, by pushing D of G of zee toward one.", "pad": 0.6 },
+        { "text": "In practice G maximizes log D(G(z)) instead: same goal, but much stronger gradients while its fakes are still bad.", "speech": "In practice, G maximizes log D of G of zee instead: same goal, but much stronger gradients while its fakes are still bad.", "pad": 1.2 }
+      ]
+    },
+    {
+      "id": "training",
+      "title": "Training: taking turns",
+      "lines": [
+        { "text": "Training alternates between the two players." },
+        { "text": "Step one: freeze G. Show D real samples labeled 1 and fakes labeled 0, and update D.", "speech": "Step one: freeze G. Show D real samples labeled one, and fakes labeled zero, and update D.", "pad": 0.6 },
+        { "text": "Step two: freeze D. Make fresh fakes, and this time label them as real.", "pad": 0.4 },
+        { "text": "The error flows back through D into G, but only G's weights change.", "pad": 0.6 },
+        { "text": "Repeat thousands of times.", "pad": 1.2 }
+      ]
+    },
+    {
+      "id": "demo",
+      "title": "A real GAN, learning",
+      "lines": [
+        { "text": "This is a real GAN, trained by the code in this project, on numbers instead of images." },
+        { "text": "The real data, in green, has two bumps. The generator's samples, in pink, start as one narrow spike.", "pad": 0.4 },
+        { "text": "The blue curve is the discriminator: how likely it thinks each value is to be real.", "pad": 0.4 },
+        { "text": "Where D says real, G moves its samples. Where D says fake, G moves away.", "pad": 1 },
+        { "text": "The spike spreads out, then splits in two, until it matches the real data.", "pad": 3 },
+        { "text": "Now D is about one half wherever the data lives: it can no longer tell real from fake.", "pad": 0.6 },
+        { "text": "Only in the empty gap between the bumps can it still catch the few fakes left there.", "pad": 1 }
+      ]
+    },
+    {
+      "id": "equilibrium",
+      "title": "Why it works",
+      "lines": [
+        { "text": "Theory explains that ending." },
+        { "text": "For a fixed generator, the best discriminator is the share of real data at each point.", "pad": 1.2 },
+        { "text": "Plugging it back in, G is minimizing the Jensen–Shannon divergence: a distance between the two distributions.", "speech": "Plugging it back in, G is minimizing the Jensen-Shannon divergence: a distance between the two distributions.", "pad": 0.4 },
+        { "text": "Its minimum is reached exactly when the generator's distribution equals the data's. Then D is ½ everywhere.", "speech": "Its minimum is reached exactly when the generator's distribution equals the data's. Then D is one half everywhere.", "pad": 1.5 },
+        { "text": "The discriminator's loss is then 2 log 2, about 1.39. Our GAN finished at 1.38.", "speech": "The discriminator's loss is then two log two, about one point three nine. Our GAN finished at one point three eight.", "pad": 1 }
+      ]
+    },
+    {
+      "id": "problems",
+      "title": "Why GANs are hard to train",
+      "lines": [
+        { "text": "In practice, GANs are famously hard to train." },
+        { "text": "Mode collapse: G finds a few outputs that fool D, and makes only those. Here it covers just one bump.", "pad": 0.6 },
+        { "text": "Instability: instead of settling down, the two players can chase each other in circles.", "pad": 0.6 },
+        { "text": "Vanishing gradients: if D wins too easily, G gets almost no signal to learn from.", "pad": 0.6 },
+        { "text": "Fixes include better losses like the Wasserstein GAN, and careful architectures and normalization.", "pad": 1 }
+      ]
+    },
+    {
+      "id": "history",
+      "title": "A short history",
+      "lines": [
+        { "text": "Ian Goodfellow and his colleagues introduced GANs in 2014." },
+        { "text": "DCGAN made them convolutional and stable. CycleGAN turned horses into zebras without paired examples." },
+        { "text": "Progressive growing, BigGAN and StyleGAN pushed them to photorealistic, high-resolution images." },
+        { "text": "Diffusion models now lead image generation, but adversarial training lives on in fast generators, upscalers and image tokenizers.", "pad": 1 }
+      ]
+    },
+    {
+      "id": "recap",
+      "title": "Recap",
+      "lines": [
+        { "text": "So, a GAN is two networks playing a game." },
+        { "text": "The generator turns noise into samples. The discriminator judges real versus fake.", "pad": 0.4 },
+        { "text": "They take turns improving, until the fakes are indistinguishable from the real data.", "pad": 2 }
+      ]
+    }
+  ]
+}

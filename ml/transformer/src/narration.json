@@ -1,0 +1,149 @@
+{
+  "_comment": "The whole voiceover script. Each scene is a list of lines; each line is one caption and one voice clip. `speech` (optional) is what the voice says when it should differ from the caption. `pad` (optional) adds extra seconds after the line so an animation can finish. Scene ids must match SCENE_COMPONENTS in src/TransformerVideo.tsx.",
+  "scenes": [
+    {
+      "id": "intro",
+      "title": "Intro",
+      "lines": [
+        { "text": "Chatbots, translators, code assistants: almost all of them run on the same design.", "pad": 0.4 },
+        { "text": "It's called the Transformer, introduced in 2017 in a paper titled “Attention Is All You Need”.", "speech": "It's called the Transformer, introduced in 2017, in a paper titled: Attention Is All You Need." },
+        { "text": "Let's build one up, piece by piece.", "pad": 0.8 }
+      ]
+    },
+    {
+      "id": "before",
+      "title": "Before Transformers",
+      "lines": [
+        { "text": "Earlier language models, called recurrent networks, read a sentence one word at a time.", "pad": 0.6 },
+        { "text": "Everything they knew had to squeeze into one memory vector, passed from word to word.", "pad": 0.6 },
+        { "text": "That was slow, because no step can start before the previous one ends. And early words fade away.", "pad": 0.6 },
+        { "text": "A Transformer takes in all the words at once, and lets every word look directly at every other word.", "pad": 1.2 }
+      ]
+    },
+    {
+      "id": "tokens",
+      "title": "Words become vectors",
+      "lines": [
+        { "text": "First, the text is split into tokens: words or pieces of words.", "pad": 0.4 },
+        { "text": "Each token has an ID number in a fixed vocabulary.", "pad": 0.4 },
+        { "text": "And each ID looks up a learned vector, called an embedding. In the original model it has 512 numbers.", "speech": "And each ID looks up a learned vector, called an embedding. In the original model, it has five hundred and twelve numbers.", "pad": 0.6 },
+        { "text": "During training, words used in similar ways end up with similar vectors.", "pad": 1.2 }
+      ]
+    },
+    {
+      "id": "position",
+      "title": "Where is each word?",
+      "lines": [
+        { "text": "But attention, as we'll see, has no built-in sense of order.", "pad": 0.4 },
+        { "text": "“Dog bites man” and “man bites dog” would look exactly the same.", "speech": "Dog bites man, and man bites dog, would look exactly the same.", "pad": 0.6 },
+        { "text": "So a positional encoding is added to each embedding: a pattern of waves that is unique for every position.", "pad": 0.8 },
+        { "text": "Fast waves tell nearby positions apart, slow waves tell far-apart ones apart.", "pad": 1.2 }
+      ]
+    },
+    {
+      "id": "idea",
+      "title": "Attention: the idea",
+      "lines": [
+        { "text": "Now the key idea. Take this sentence: what does “it” refer to?", "speech": "Now the key idea. Take this sentence. What does the word “it” refer to?", "pad": 0.6 },
+        { "text": "You know it's the animal, because animals get tired, not streets.", "pad": 0.4 },
+        { "text": "Attention lets the word “it” look at every other word, and give each one a weight.", "pad": 0.8 },
+        { "text": "Change one word to “wide”, and the attention moves to “street”.", "pad": 1 },
+        { "text": "The new vector for “it” is then a weighted mix of the words it attends to.", "pad": 1 }
+      ]
+    },
+    {
+      "id": "qkv",
+      "title": "Queries, keys and values",
+      "lines": [
+        { "text": "How are those weights computed? Each word makes three vectors from its embedding.", "pad": 0.4 },
+        { "text": "A query: what am I looking for?", "pad": 0.3 },
+        { "text": "A key: what do I contain?", "pad": 0.3 },
+        { "text": "And a value: what will I pass on, if someone attends to me?", "pad": 0.4 },
+        { "text": "Each is made by multiplying the embedding by a learned matrix: W Q, W K and W V.", "speech": "Each is made by multiplying the embedding by a learned matrix: W Q, W K, and W V.", "pad": 0.6 },
+        { "text": "A query that matches a key well gives a high score, like a search engine matching a request to page titles.", "pad": 1 }
+      ]
+    },
+    {
+      "id": "math",
+      "title": "Attention, step by step",
+      "lines": [
+        { "text": "Here is the whole calculation, with real numbers, for a four-word sentence.", "pad": 0.4 },
+        { "text": "Step one: multiply every query by every key. This gives a grid of scores.", "pad": 1.2 },
+        { "text": "Step two: divide by the square root of the vector size, to keep the numbers in a sensible range.", "pad": 1 },
+        { "text": "Step three: softmax turns each row into weights that are positive and add up to one.", "pad": 1.2 },
+        { "text": "Step four: each word's output is the weighted sum of all the value vectors.", "pad": 1.4 },
+        { "text": "That's it. The whole of attention is one line: softmax of Q K transpose over root d, times V.", "speech": "That's it. The whole of attention is one line: softmax of Q K transpose, over root d, times V.", "pad": 1.2 }
+      ]
+    },
+    {
+      "id": "multihead",
+      "title": "Multi-head attention",
+      "lines": [
+        { "text": "One attention pattern can only capture one kind of relationship at a time.", "pad": 0.3 },
+        { "text": "So the Transformer runs several attention heads side by side, each with its own query, key and value matrices.", "pad": 0.6 },
+        { "text": "One head might link each word to the previous one, another pronouns to nouns, another verbs to their objects.", "pad": 1 },
+        { "text": "Their outputs are joined together and mixed by one more matrix. The original model used 8 heads.", "speech": "Their outputs are joined together, and mixed by one more matrix. The original model used eight heads.", "pad": 1 }
+      ]
+    },
+    {
+      "id": "block",
+      "title": "The Transformer block",
+      "lines": [
+        { "text": "Attention is the heart of a Transformer block, but not the whole of it.", "pad": 0.3 },
+        { "text": "The attention output is added back onto its input: a residual connection, so information can skip ahead.", "pad": 0.6 },
+        { "text": "Then layer normalization keeps the numbers well scaled.", "pad": 0.4 },
+        { "text": "Next, a feed-forward network processes each word on its own: attention mixes between words, the feed-forward thinks within each one.", "pad": 0.6 },
+        { "text": "Another residual and normalization, and the block is complete. Vectors in, same-shaped vectors out.", "pad": 1 }
+      ]
+    },
+    {
+      "id": "stack",
+      "title": "Stacking blocks",
+      "lines": [
+        { "text": "Because the output has the same shape as the input, blocks can be stacked.", "pad": 0.4 },
+        { "text": "The original Transformer used 6. GPT-3 uses 96.", "speech": "The original Transformer used six. GPT three uses ninety six.", "pad": 0.6 },
+        { "text": "Layer by layer, each word's vector is refined: from the word itself, to its grammar, to its meaning in context.", "pad": 1.2 }
+      ]
+    },
+    {
+      "id": "encdec",
+      "title": "Encoder and decoder",
+      "lines": [
+        { "text": "The original Transformer was built for translation, with two stacks.", "pad": 0.3 },
+        { "text": "The encoder reads the whole source sentence, and every word may look at every other.", "pad": 0.6 },
+        { "text": "The decoder writes the translation one word at a time. Through cross-attention, its queries look at the encoder's keys and values.", "pad": 0.8 },
+        { "text": "Later models kept just one half: BERT is an encoder, GPT is a decoder, and T5 keeps both.", "speech": "Later models kept just one half. BERT is an encoder. GPT is a decoder. And T five keeps both.", "pad": 1 }
+      ]
+    },
+    {
+      "id": "generate",
+      "title": "Generating text",
+      "lines": [
+        { "text": "A GPT-style model generates text by predicting the next token.", "speech": "A GPT style model generates text, by predicting the next token." },
+        { "text": "While training, a word must not peek at the words after it. A causal mask blocks them before the softmax.", "pad": 1 },
+        { "text": "At the end, the last word's vector is turned into a score for every token in the vocabulary.", "pad": 0.4 },
+        { "text": "Softmax turns the scores into probabilities, and one token is picked.", "pad": 0.6 },
+        { "text": "It's added to the input, and the whole process repeats, one token at a time.", "pad": 2 }
+      ]
+    },
+    {
+      "id": "why",
+      "title": "Why it took over",
+      "lines": [
+        { "text": "Why did Transformers win? First, they process all words in parallel, which suits GPUs perfectly.", "pad": 0.4 },
+        { "text": "Second, any two words are just one step apart, however far apart they are in the text.", "pad": 0.4 },
+        { "text": "Third, they keep getting better as they get bigger: from 65 million parameters in 2017 to 175 billion in GPT-3.", "speech": "Third, they keep getting better as they get bigger: from sixty five million parameters in 2017, to a hundred and seventy five billion in GPT three.", "pad": 0.8 },
+        { "text": "The price: every word attends to every word, so the cost grows with the square of the length.", "pad": 1.2 }
+      ]
+    },
+    {
+      "id": "recap",
+      "title": "Recap",
+      "lines": [
+        { "text": "To recap: tokens become vectors, plus a sense of position." },
+        { "text": "Attention lets every word gather information from every other word, through queries, keys and values." },
+        { "text": "Wrap it with residuals, normalization and a feed-forward network, stack it many times, and you have a Transformer.", "pad": 2 }
+      ]
+    }
+  ]
+}

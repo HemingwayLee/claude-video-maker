@@ -1,0 +1,132 @@
+{
+  "_comment": "The whole voiceover script. Each scene is a list of lines; each line is one caption and one voice clip. `speech` (optional) is what the voice says when it should differ from the caption. `pad` (optional) adds extra seconds after the line so an animation can finish. Scene ids must match SCENE_COMPONENTS in src/CnnVideo.tsx.",
+  "scenes": [
+    {
+      "id": "intro",
+      "title": "Intro",
+      "lines": [
+        { "text": "How does a computer recognize a cat in a photo?" },
+        { "text": "Most of the time, the answer is a convolutional neural network, or CNN." },
+        { "text": "Let's build one up, piece by piece.", "pad": 0.5 }
+      ]
+    },
+    {
+      "id": "pixels",
+      "title": "Images are numbers",
+      "lines": [
+        { "text": "To a computer, an image is just a grid of numbers." },
+        { "text": "Each pixel stores a brightness, from 0 for black to 1 for white.", "speech": "Each pixel stores a brightness, from zero for black, to one for white.", "pad": 0.8 },
+        { "text": "A color image stacks three of these grids: red, green and blue.", "pad": 1 }
+      ]
+    },
+    {
+      "id": "dense",
+      "title": "Why not a regular network?",
+      "lines": [
+        { "text": "We could flatten the grid into one long list and feed it to an ordinary neural network.", "pad": 0.8 },
+        { "text": "But even a small 224 × 224 color photo has over 150 thousand numbers.", "speech": "But even a small, two twenty four by two twenty four color photo, has over a hundred and fifty thousand numbers.", "pad": 0.5 },
+        { "text": "Connect each one to just 1,000 neurons, and the first layer alone needs 150 million weights.", "speech": "Connect each one to just a thousand neurons, and the first layer alone needs a hundred and fifty million weights.", "pad": 0.8 },
+        { "text": "Worse, flattening forgets which pixels are neighbors, so a cat in the corner looks nothing like a cat in the center.", "pad": 1.2 }
+      ]
+    },
+    {
+      "id": "convolution",
+      "title": "Convolution",
+      "lines": [
+        { "text": "A CNN solves this with a small sliding window, called a filter or kernel." },
+        { "text": "This 3 × 3 kernel holds just nine weights.", "speech": "This three by three kernel holds just nine weights.", "pad": 0.5 },
+        { "text": "Place it on the image, multiply each pixel by the weight on top of it, and add everything up.", "pad": 1.5 },
+        { "text": "That sum becomes one pixel of a new image, called a feature map.", "pad": 0.5 },
+        { "text": "Then slide the kernel one step and repeat, across the whole image.", "pad": 3.5 },
+        { "text": "This kernel lights up wherever dark meets bright. It is a vertical edge detector.", "pad": 1.5 }
+      ]
+    },
+    {
+      "id": "filters",
+      "title": "Weight sharing & many filters",
+      "lines": [
+        { "text": "Notice that the same nine weights are reused at every position.", "pad": 0.5 },
+        { "text": "This is weight sharing: a handful of weights instead of millions, and a pattern is found wherever it appears.", "pad": 1 },
+        { "text": "A real layer uses many filters at once, each looking for a different pattern.", "pad": 1.5 },
+        { "text": "Their feature maps stack into a new volume, with one channel per filter.", "pad": 1.5 }
+      ]
+    },
+    {
+      "id": "stride",
+      "title": "Stride & padding",
+      "lines": [
+        { "text": "Two settings control the size of the output." },
+        { "text": "Stride is how far the kernel jumps each step. A stride of 2 roughly halves the output.", "speech": "Stride is how far the kernel jumps each step. A stride of two, roughly halves the output.", "pad": 1.5 },
+        { "text": "Padding adds a border of zeros, so the output keeps the input's size, and edge pixels count too.", "pad": 2 }
+      ]
+    },
+    {
+      "id": "relu",
+      "title": "Activation: ReLU",
+      "lines": [
+        { "text": "After each convolution comes an activation function, usually ReLU.", "speech": "After each convolution comes an activation function, usually, ray-loo.", "pad": 1 },
+        { "text": "It keeps positive values and turns every negative value into zero.", "pad": 1.5 },
+        { "text": "Without this non-linearity, stacked layers would collapse into one simple linear function.", "pad": 1 }
+      ]
+    },
+    {
+      "id": "pooling",
+      "title": "Pooling",
+      "lines": [
+        { "text": "Next, a pooling layer shrinks the feature map." },
+        { "text": "Max pooling looks at each 2 × 2 block and keeps only the largest value.", "speech": "Max pooling looks at each two by two block, and keeps only the largest value.", "pad": 2 },
+        { "text": "The map gets four times smaller, keeps its strongest signals, and cares less about small shifts.", "pad": 1 }
+      ]
+    },
+    {
+      "id": "hierarchy",
+      "title": "Stacking layers",
+      "lines": [
+        { "text": "Now stack these blocks: convolution, ReLU, pooling, again and again.", "speech": "Now stack these blocks: convolution, ray-loo, pooling, again and again.", "pad": 0.8 },
+        { "text": "Early layers detect simple edges and colors.", "pad": 0.5 },
+        { "text": "Middle layers combine them into textures and shapes, like eyes or ears.", "pad": 0.5 },
+        { "text": "Deep layers respond to whole objects, like a cat's face.", "pad": 0.5 },
+        { "text": "Going deeper, the maps get smaller, but the number of channels grows.", "pad": 1.5 }
+      ]
+    },
+    {
+      "id": "architecture",
+      "title": "The full architecture",
+      "lines": [
+        { "text": "Here is the full architecture." },
+        { "text": "The input image flows through convolution and pooling blocks that extract features.", "pad": 1.5 },
+        { "text": "The final volume is flattened into one long vector.", "pad": 0.5 },
+        { "text": "Fully connected layers combine all of that evidence.", "pad": 0.5 },
+        { "text": "And a softmax turns the scores into probabilities: here, 92% cat.", "speech": "And a softmax turns the scores into probabilities. Here, ninety two percent, cat.", "pad": 1.8 }
+      ]
+    },
+    {
+      "id": "training",
+      "title": "Training",
+      "lines": [
+        { "text": "But where do the filter weights come from? Nobody writes them by hand.", "pad": 0.5 },
+        { "text": "During training, the network makes a guess and a loss function measures how wrong it is.", "pad": 1 },
+        { "text": "Backpropagation then nudges every weight a little, to make the error smaller.", "pad": 1.5 },
+        { "text": "After many thousands of examples, the filters become edge detectors and object detectors on their own.", "pad": 1.5 }
+      ]
+    },
+    {
+      "id": "history",
+      "title": "Famous CNNs",
+      "lines": [
+        { "text": "This recipe powers some famous models." },
+        { "text": "LeNet read handwritten digits back in 1998.", "speech": "Lee-Net read handwritten digits back in nineteen ninety eight.", "pad": 0.3 },
+        { "text": "AlexNet won ImageNet in 2012 and kicked off the deep learning boom.", "speech": "Alex-Net won Image-Net in twenty twelve, and kicked off the deep learning boom.", "pad": 0.3 },
+        { "text": "VGG went deeper with small 3 × 3 filters, and ResNet added skip connections to train over 100 layers.", "speech": "V G G went deeper with small three by three filters. And Res-Net added skip connections, to train over a hundred layers.", "pad": 1.5 }
+      ]
+    },
+    {
+      "id": "recap",
+      "title": "Recap",
+      "lines": [
+        { "text": "To recap: convolution finds local patterns, ReLU adds non-linearity, pooling shrinks, and fully connected layers decide.", "speech": "To recap. Convolution finds local patterns. Ray-loo adds non-linearity. Pooling shrinks. And fully connected layers decide.", "pad": 1 },
+        { "text": "That's a convolutional neural network.", "pad": 2.5 }
+      ]
+    }
+  ]
+}
