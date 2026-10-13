@@ -1,0 +1,140 @@
+{
+  "_comment": "The whole voiceover script. Each scene is a list of lines; each line is one caption and one voice clip. `speech` (optional) is what the voice says when it should differ from the caption. `pad` (optional) adds extra seconds after the line so an animation can finish. Scene ids must match SCENE_COMPONENTS in src/Pix2PixVideo.tsx; scenes time their animations against these lines, so if you add or remove a line, check that scene too.",
+  "scenes": [
+    {
+      "id": "intro",
+      "title": "Intro",
+      "lines": [
+        { "text": "Turn a sketch into a photo. A map into a satellite view. Day into night. A black-and-white picture into color.", "pad": 0.6 },
+        { "text": "Each of these takes an image in and gives an image out. It is called image-to-image translation." },
+        { "text": "Pix2Pix does all of them with one recipe. It was published in 2017 by Isola, Zhu, Zhou and Efros at Berkeley.", "speech": "Pix to Pix does all of them with one recipe. It was published in 2017 by Isola, Zoo, Zhou and Efros at Berkeley.", "pad": 0.8 }
+      ]
+    },
+    {
+      "id": "task",
+      "title": "The task: image in, image out",
+      "lines": [
+        { "text": "We train on pairs: an input image x, and the image y it should become.", "speech": "We train on pairs: an input image, x, and the image, why, it should become.", "pad": 0.4 },
+        { "text": "A network G looks at x and paints its own answer, G of x.", "speech": "A network, G, looks at x and paints its own answer, G of x.", "pad": 0.4 },
+        { "text": "Before Pix2Pix, every task had its own network and, above all, its own hand-made loss: a formula for “how wrong is this picture?”", "speech": "Before Pix to Pix, every task had its own network, and, above all, its own hand-made loss: a formula for how wrong is this picture?", "pad": 0.6 }
+      ]
+    },
+    {
+      "id": "blur",
+      "title": "Why a simple loss gives blur",
+      "lines": [
+        { "text": "The obvious loss is L1: the average pixel difference between G of x and y.", "speech": "The obvious loss is L 1: the average pixel difference between G of x, and why.", "pad": 0.4 },
+        { "text": "Here is a toy task. The input is an outline. The target is the shape, filled, with stripes.", "pad": 0.3 },
+        { "text": "But the outline doesn't say where the stripes go. All four of these answers are right.", "pad": 0.8 },
+        { "text": "Take one pixel. Half of the right answers make it dark, half make it light. L1 can't pick, so the network plays safe.", "speech": "Take one pixel. Half of the right answers make it dark, half make it light. L 1 can't pick, so the network plays safe.", "pad": 0.4 },
+        { "text": "Hedging over every possible answer at once gives this: a blurry average that matches none of them.", "pad": 1.0 }
+      ]
+    },
+    {
+      "id": "idea",
+      "title": "The idea: learn the loss",
+      "lines": [
+        { "text": "Pix2Pix lets a second network judge the result instead: a discriminator, D.", "speech": "Pix to Pix lets a second network judge the result instead: a discriminator, D.", "pad": 0.3 },
+        { "text": "D sees pairs. A real pair is the input with its true output. A fake pair is the input with G's output.", "pad": 0.6 },
+        { "text": "D learns to tell them apart. G learns to fool D. A blurry average is easy to spot, so G is pushed to commit to one sharp answer.", "pad": 0.6 },
+        { "text": "This is a conditional GAN, where the condition y from our last video is now a whole image: x.", "speech": "This is a conditional GAN, where the condition, why, from our last video, is now a whole image: x.", "pad": 0.4 },
+        { "text": "D also needs x to judge whether the output fits the input, not just whether it looks real.", "pad": 0.8 }
+      ]
+    },
+    {
+      "id": "unet",
+      "title": "The generator: a U-Net",
+      "lines": [
+        { "text": "Now the networks. The generator is an encoder-decoder.", "pad": 0.3 },
+        { "text": "The encoder shrinks the image step by step, from 256 by 256 pixels down to a single 1 by 1 point with 512 channels.", "pad": 0.4 },
+        { "text": "The decoder grows it back up to a full-size image.", "pad": 0.5 },
+        { "text": "But input and output share a lot: the edges of the sketch are the edges of the photo. Squeezing everything through the bottleneck loses those details.", "pad": 0.5 },
+        { "text": "So Pix2Pix adds skip connections. Each encoder layer is copied straight across and stacked onto the decoder layer of the same size.", "speech": "So Pix to Pix adds skip connections. Each encoder layer is copied straight across, and stacked onto the decoder layer of the same size.", "pad": 0.5 },
+        { "text": "Drawn this way, it looks like a U. That is why it is called a U-Net.", "pad": 0.8 }
+      ]
+    },
+    {
+      "id": "patchgan",
+      "title": "The discriminator: PatchGAN",
+      "lines": [
+        { "text": "The discriminator doesn't give one score for the whole image. It scores patches.", "pad": 0.3 },
+        { "text": "Each output cell looks at one 70 by 70 pixel patch and says: real or fake. On a 256 pixel image, that is a 30 by 30 grid of answers.", "pad": 0.6 },
+        { "text": "The final score is their average.", "pad": 0.3 },
+        { "text": "Why patches? L1 already gets the big picture right: the layout and colors. What it misses is local: sharp edges and texture. A patch judge is all you need for that.", "speech": "Why patches? L 1 already gets the big picture right: the layout and colors. What it misses is local: sharp edges and texture. A patch judge is all you need for that.", "pad": 0.5 },
+        { "text": "It is also small and fast, and it works on images of any size.", "pad": 0.3 },
+        { "text": "The paper tried patches of 1, 16, 70 and 286 pixels. 70 was the best: sharp, with the fewest artifacts.", "pad": 0.8 }
+      ]
+    },
+    {
+      "id": "objective",
+      "title": "The objective",
+      "lines": [
+        { "text": "Here is the full objective.", "pad": 0.3 },
+        { "text": "The cGAN term: D wants a high score on real pairs and a low score on fake pairs. G wants the opposite.", "speech": "The C GAN term: D wants a high score on real pairs, and a low score on fake pairs. G wants the opposite.", "pad": 0.5 },
+        { "text": "The L1 term keeps G close to the true answer, so the result still fits the input.", "speech": "The L 1 term keeps G close to the true answer, so the result still fits the input.", "pad": 0.4 },
+        { "text": "Lambda weighs the two. The paper uses 100.", "pad": 0.4 },
+        { "text": "Notice there is no noise vector z. The authors found G simply learned to ignore it. Instead, dropout adds a little randomness, even at test time.", "speech": "Notice there is no noise vector, zee. The authors found G simply learned to ignore it. Instead, dropout adds a little randomness, even at test time.", "pad": 0.8 }
+      ]
+    },
+    {
+      "id": "training",
+      "title": "Training",
+      "lines": [
+        { "text": "Training alternates two steps, like any GAN.", "pad": 0.3 },
+        { "text": "Step one: show D a real pair and a fake pair, and update D to tell them apart.", "pad": 0.6 },
+        { "text": "Step two: update G to fool D, and to stay close to y in L1.", "speech": "Step two: update G to fool D, and to stay close to why, in L 1.", "pad": 0.6 },
+        { "text": "The paper uses Adam with a learning rate of 0.0002, and a batch of just one image. On the 400 facade photos, training takes under two hours on one GPU.", "pad": 0.8 }
+      ]
+    },
+    {
+      "id": "demo",
+      "title": "A real Pix2Pix, learning",
+      "lines": [
+        { "text": "Let's see it for real. We trained a tiny Pix2Pix on the outline-to-stripes task: a 32 by 32 U-Net, and a PatchGAN with an 8 by 8 grid of patch scores.", "pad": 0.5 },
+        { "text": "Three generators, from the same start, on the same data. One uses only L1. One uses only the cGAN loss. One uses both, like Pix2Pix.", "speech": "Three generators, from the same start, on the same data. One uses only L 1. One uses only the C GAN loss. One uses both, like Pix to Pix.", "pad": 0.5 },
+        { "text": "Here they are, learning over 3,000 training steps.", "pad": 4.5 },
+        { "text": "L1 alone gets the shape and the color, but the stripes are a smear: the blurry average we predicted.", "speech": "L 1 alone gets the shape and the color, but the stripes are a smear: the blurry average we predicted.", "pad": 0.6 },
+        { "text": "cGAN alone has nothing tying it to the input. It ignores the outline and draws the same blob every time.", "speech": "C GAN alone has nothing tying it to the input. It ignores the outline, and draws the same blob every time.", "pad": 0.6 },
+        { "text": "Together, L1 gets the layout right and the GAN makes it sharp.", "pad": 1.0 }
+      ]
+    },
+    {
+      "id": "patches",
+      "title": "Inside the PatchGAN",
+      "lines": [
+        { "text": "Here is what the trained discriminator thinks, patch by patch.", "pad": 0.4 },
+        { "text": "Green means it believes the patch is real. Red means fake. The real pair scores high almost everywhere.", "pad": 0.6 },
+        { "text": "Pix2Pix's own output is still caught in many patches. The game between G and D never really ends.", "speech": "Pix to Pix's own output is still caught in many patches. The game between G and D never really ends.", "pad": 0.5 },
+        { "text": "But the blurry L1 answer scores lowest of all: fake almost everywhere inside the shape. That is the signal that pushes G toward crisp stripes.", "speech": "But the blurry L 1 answer scores lowest of all: fake almost everywhere inside the shape. That is the signal that pushes G toward crisp stripes.", "pad": 1.0 }
+      ]
+    },
+    {
+      "id": "results",
+      "title": "What it can do",
+      "lines": [
+        { "text": "With the same code and no changes to the loss, the paper translated labels into street scenes and building facades, maps into aerial photos, edges into shoes and handbags, and day into night.", "pad": 0.5 },
+        { "text": "In a test with human judges, its fake aerial photos were mistaken for real ones in about 19 percent of trials.", "pad": 0.4 },
+        { "text": "People soon used the released code for their own ideas, like edges to cats.", "pad": 0.8 }
+      ]
+    },
+    {
+      "id": "legacy",
+      "title": "Limits and what came next",
+      "lines": [
+        { "text": "Pix2Pix has one big limit: it needs paired examples, the same scene as input and as output.", "pad": 0.4 },
+        { "text": "CycleGAN, by some of the same authors, removed that need. It learns from two separate piles of images.", "speech": "Cycle GAN, by some of the same authors, removed that need. It learns from two separate piles of images.", "pad": 0.4 },
+        { "text": "Pix2PixHD scaled it up to 2048 by 1024 pixels, and SPADE, also called GauGAN, turned rough label maps into landscapes.", "speech": "Pix to Pix HD scaled it up to 2048 by 1024 pixels, and SPADE, also called Gaw GAN, turned rough label maps into landscapes.", "pad": 0.4 },
+        { "text": "And its PatchGAN lives on: VQGAN, and the image autoencoder inside Stable Diffusion, are both trained with a patch discriminator.", "speech": "And its PatchGAN lives on: V Q GAN, and the image autoencoder inside Stable Diffusion, are both trained with a patch discriminator.", "pad": 0.8 }
+      ]
+    },
+    {
+      "id": "recap",
+      "title": "Recap",
+      "lines": [
+        { "text": "Pix2Pix in three pieces: a U-Net generator, whose skips carry the details across.", "speech": "Pix to Pix in three pieces: a U-Net generator, whose skips carry the details across.", "pad": 0.3 },
+        { "text": "A PatchGAN discriminator that judges every patch.", "pad": 0.3 },
+        { "text": "And a loss that adds them together: cGAN for sharpness, plus L1 to stay faithful to the input.", "speech": "And a loss that adds them together: C GAN for sharpness, plus L 1 to stay faithful to the input.", "pad": 2.0 }
+      ]
+    }
+  ]
+}

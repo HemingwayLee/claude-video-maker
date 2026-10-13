@@ -1,0 +1,22 @@
+{
+  "name": "goji-taiwan-video",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A narrated 16:9 anime-style video: can goji (枸杞) be grown in Taiwan? Built with Remotion (React)",
+  "scripts": {
+    "voiceover": "node scripts/voiceover.mjs",
+    "studio": "remotion studio",
+    "render": "remotion render GojiTaiwan out/goji-taiwan.mp4",
+    "still": "remotion still GojiTaiwan out/thumbnail.png --frame=75"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.534",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "remotion": "4.0.534"
+  },
+  "devDependencies": {
+    "@types/react": "19.1.8",
+    "typescript": "5.8.3"
+  }
+}

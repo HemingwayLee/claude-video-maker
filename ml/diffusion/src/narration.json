@@ -1,0 +1,318 @@
+{
+  "_comment": "The whole voiceover script. Each scene is a list of lines; each line is one caption and one voice clip. `speech` (optional) is what the voice says when it should differ from the caption. `pad` (optional) adds extra seconds after the line so an animation can finish. Scene ids must match SCENE_COMPONENTS in src/DiffusionVideo.tsx; scenes time their animations against these lines, so if you add or remove a line, check that scene too.",
+  "scenes": [
+    {
+      "id": "intro",
+      "title": "Intro",
+      "lines": [
+        {
+          "text": "Every one of these pictures started as pure random noise.",
+          "pad": 1.2
+        },
+        {
+          "text": "A diffusion model removes that noise one small step at a time, until a picture is left.",
+          "pad": 0.6
+        },
+        {
+          "text": "This is the idea behind Stable Diffusion, DALL·E, Imagen and video models like Sora. Let's see how it works.",
+          "speech": "This is the idea behind Stable Diffusion, Dall-E, Imagen, and video models like Sora. Let's see how it works.",
+          "pad": 0.8
+        }
+      ]
+    },
+    {
+      "id": "idea",
+      "title": "The idea: destroy, then undo",
+      "lines": [
+        {
+          "text": "Destroying a picture is easy. Add a little noise, then a little more, and after enough steps nothing is left.",
+          "pad": 0.6
+        },
+        {
+          "text": "The hard part is going back. A diffusion model is a network trained to undo one small step of noise.",
+          "pad": 0.4
+        },
+        {
+          "text": "Repeat that small step hundreds of times, starting from pure noise, and a brand-new picture appears.",
+          "pad": 0.4
+        },
+        {
+          "text": "The idea appeared in 2015. In 2020, Ho, Jain and Abbeel made it work on real photos. They called it DDPM.",
+          "speech": "The idea appeared in 2015. In 2020, Ho, Jain and Abbeel made it work on real photos. They called it D D P M.",
+          "pad": 0.8
+        }
+      ]
+    },
+    {
+      "id": "forward",
+      "title": "The forward process: adding noise",
+      "lines": [
+        {
+          "text": "Here is the forward process. At each of T = 1000 steps, we shrink the image a tiny bit and add a tiny bit of Gaussian noise.",
+          "speech": "Here is the forward process. At each of a thousand steps, we shrink the image a tiny bit, and add a tiny bit of Gaussian noise.",
+          "pad": 0.4
+        },
+        {
+          "text": "How much noise is added at each step is set by a schedule, β. In DDPM it grows from 0.0001 to 0.02.",
+          "speech": "How much noise is added at each step is set by a schedule, beta. In D D P M it grows from 0.0001 to 0.02.",
+          "pad": 0.4
+        },
+        {
+          "text": "The nice part: we don't need to add noise step by step. We can jump straight to any step t with one formula.",
+          "pad": 0.4
+        },
+        {
+          "text": "xₜ is the clean image times √ᾱₜ, plus random noise ε times √(1 − ᾱₜ).",
+          "speech": "x t is the clean image, times the square root of alpha bar t, plus random noise, epsilon, times the square root of one minus alpha bar t.",
+          "pad": 0.6
+        },
+        {
+          "text": "As t grows, the image part fades out and the noise part takes over. By step 1000, only noise is left.",
+          "pad": 0.8
+        }
+      ]
+    },
+    {
+      "id": "denoiser",
+      "title": "The reverse process: a noise predictor",
+      "lines": [
+        {
+          "text": "Going backwards needs a neural network. It gets a noisy image xₜ and the step number t.",
+          "speech": "Going backwards needs a neural network. It gets a noisy image, x t, and the step number, t.",
+          "pad": 0.4
+        },
+        {
+          "text": "DDPM's trick: don't ask the network for the clean image. Ask it for the noise that was added, ε.",
+          "speech": "D D P M's trick: don't ask the network for the clean image. Ask it for the noise that was added, epsilon.",
+          "pad": 0.5
+        },
+        {
+          "text": "If you know the noise, you can remove some of it. That gives a slightly cleaner image, one step back.",
+          "pad": 0.5
+        },
+        {
+          "text": "Its guess of the noise also gives a guess of the clean image. Early on that guess is a blurry average. It sharpens as the noise goes away.",
+          "pad": 0.8
+        }
+      ]
+    },
+    {
+      "id": "training",
+      "title": "Training",
+      "lines": [
+        {
+          "text": "Training is remarkably simple. Take a clean training example.",
+          "pad": 0.2
+        },
+        {
+          "text": "Pick a random step t, and some random noise ε. Jump to the noisy xₜ with the formula.",
+          "speech": "Pick a random step, t, and some random noise, epsilon. Jump to the noisy x t with the formula.",
+          "pad": 0.4
+        },
+        {
+          "text": "Ask the network to predict ε, and measure the squared error. Update, and repeat.",
+          "speech": "Ask the network to predict epsilon, and measure the squared error. Update, and repeat.",
+          "pad": 0.4
+        },
+        {
+          "text": "That is the whole loss. There is no discriminator and no adversarial game, so training is stable, unlike a GAN.",
+          "pad": 0.8
+        }
+      ]
+    },
+    {
+      "id": "sampling",
+      "title": "Sampling: from noise to a picture",
+      "lines": [
+        {
+          "text": "To make a new picture, start from pure noise, and run the network once for every step, from 1000 down to 1.",
+          "pad": 0.4
+        },
+        {
+          "text": "At each step: predict the noise, remove a little of it, then add back a smaller amount of fresh noise.",
+          "pad": 0.4
+        },
+        {
+          "text": "Watch the network's guess on the right. At first it is an average of everything it knows. Then it commits to one picture.",
+          "pad": 3.0
+        },
+        {
+          "text": "These use the ideal denoiser for six training images, computed exactly. A trained network approximates it, and makes new pictures, not copies.",
+          "pad": 0.8
+        }
+      ]
+    },
+    {
+      "id": "unet",
+      "title": "The network: a U-Net that knows the time",
+      "lines": [
+        {
+          "text": "For images, the noise predictor is usually a U-Net: the same encoder-decoder with skip connections as in Pix2Pix.",
+          "speech": "For images, the noise predictor is usually a U-Net: the same encoder-decoder with skip connections, as in Pix to Pix.",
+          "pad": 0.4
+        },
+        {
+          "text": "Its output has the same size as its input. In goes a noisy image, out comes the predicted noise.",
+          "pad": 0.4
+        },
+        {
+          "text": "The step number t is turned into a vector with sines and cosines, like positions in a Transformer, and added inside every block.",
+          "pad": 0.5
+        },
+        {
+          "text": "So one network handles every noise level. It knows whether to remove a lot of noise or just a little.",
+          "pad": 0.4
+        },
+        {
+          "text": "Self-attention layers at the low resolutions let distant parts of the image agree with each other.",
+          "pad": 0.4
+        },
+        {
+          "text": "Newer models like Stable Diffusion 3 and Sora replace the U-Net with a Transformer. This is called a Diffusion Transformer, or DiT.",
+          "speech": "Newer models like Stable Diffusion 3 and Sora replace the U-Net with a Transformer. This is called a Diffusion Transformer, or D I T.",
+          "pad": 0.8
+        }
+      ]
+    },
+    {
+      "id": "demo",
+      "title": "A real diffusion model, learning",
+      "lines": [
+        {
+          "text": "Let's watch a real diffusion model. We trained a tiny one from scratch on 2-D points along a spiral.",
+          "pad": 0.4
+        },
+        {
+          "text": "Here is the forward process on that data: the spiral dissolves into a round cloud of noise.",
+          "pad": 2.0
+        },
+        {
+          "text": "The network is a small multi-layer perceptron. It was trained for 12,000 steps with exactly the loss we just saw.",
+          "pad": 0.4
+        },
+        {
+          "text": "These arrows show what it learned: at each point, which way is less noisy. With lots of noise, they point toward the middle. With little noise, they point at the spiral.",
+          "pad": 2.0
+        },
+        {
+          "text": "Now we sample. 1,500 points of pure noise, 1,000 steps.",
+          "pad": 6.5
+        },
+        {
+          "text": "The noise has become a spiral. The faint lines show the paths of a few points.",
+          "pad": 1.0
+        }
+      ]
+    },
+    {
+      "id": "ddim",
+      "title": "Fewer steps: DDIM",
+      "lines": [
+        {
+          "text": "A thousand network calls per picture is slow. DDIM, from 2021, takes bigger, deterministic steps with the same trained network.",
+          "speech": "A thousand network calls per picture is slow. D D I M, from 2021, takes bigger, deterministic steps, with the same trained network.",
+          "pad": 0.4
+        },
+        {
+          "text": "With our model, 50 steps work almost as well as 1,000. At 10 steps, most of the shape is lost. At 3 steps it falls apart.",
+          "pad": 0.6
+        },
+        {
+          "text": "Newer methods, like distillation and consistency models, get good images in one to four steps.",
+          "pad": 0.8
+        }
+      ]
+    },
+    {
+      "id": "guidance",
+      "title": "Conditioning and guidance",
+      "lines": [
+        {
+          "text": "So far the model makes a random picture. To ask for something specific, we give the network a condition: a class, or a text prompt.",
+          "pad": 0.4
+        },
+        {
+          "text": "We trained a second tiny model on three shapes, with the shape as its condition. About one time in seven, we hid the condition, so it also learned to work without one.",
+          "pad": 0.4
+        },
+        {
+          "text": "Classifier-free guidance then mixes two predictions: one with the condition, one without. It pushes away from the unconditional one, by a guidance scale w.",
+          "speech": "Classifier-free guidance then mixes two predictions: one with the condition, and one without. It pushes away from the unconditional one, by a guidance scale, w.",
+          "pad": 0.5
+        },
+        {
+          "text": "With w = 0, only the unconditional prediction is used: the samples smear across all three shapes. With w = 1, 97 percent land on the shape we asked for.",
+          "speech": "With w equals zero, only the unconditional prediction is used: the samples smear across all three shapes. With w equals one, 97 percent land on the shape we asked for.",
+          "pad": 0.6
+        },
+        {
+          "text": "With w = 3, all of them do. But look: they cover only part of the ring, and one corner of the triangle. Stronger guidance follows the condition more closely, with less variety.",
+          "speech": "With w equals three, all of them do. But look: they cover only part of the ring, and one corner of the triangle. Stronger guidance follows the condition more closely, with less variety.",
+          "pad": 1.2
+        }
+      ]
+    },
+    {
+      "id": "latent",
+      "title": "Latent diffusion: Stable Diffusion",
+      "lines": [
+        {
+          "text": "Running a U-Net 50 times on a 512 by 512 image is expensive. Latent diffusion, from 2022, made it cheaper.",
+          "pad": 0.4
+        },
+        {
+          "text": "First, an autoencoder compresses the image into a 64 by 64 by 4 latent: 48 times fewer numbers.",
+          "pad": 0.4
+        },
+        {
+          "text": "Diffusion runs in that small latent space. At the end, the decoder turns the latent back into a full-size image.",
+          "pad": 0.4
+        },
+        {
+          "text": "The prompt goes through a text encoder, and the U-Net reads it with cross-attention. This is Stable Diffusion.",
+          "pad": 0.8
+        }
+      ]
+    },
+    {
+      "id": "compare",
+      "title": "Diffusion vs. GANs",
+      "lines": [
+        {
+          "text": "Compared with GANs from our earlier videos: diffusion trains with one simple, stable loss, and it covers the whole variety of the data instead of collapsing to a few modes.",
+          "pad": 0.4
+        },
+        {
+          "text": "In 2021, a paper called Diffusion Models Beat GANs showed it on ImageNet.",
+          "pad": 0.4
+        },
+        {
+          "text": "The price is speed: many network calls per sample instead of one. That is what DDIM, latent diffusion and distillation all fight.",
+          "pad": 0.8
+        }
+      ]
+    },
+    {
+      "id": "recap",
+      "title": "Recap",
+      "lines": [
+        {
+          "text": "Diffusion in four pieces. A forward process that adds noise, with a formula to jump to any step.",
+          "pad": 0.2
+        },
+        {
+          "text": "A network that predicts the noise, trained with a simple squared error.",
+          "pad": 0.2
+        },
+        {
+          "text": "A sampler that starts from pure noise and removes it step by step.",
+          "pad": 0.2
+        },
+        {
+          "text": "And conditioning with guidance, to steer it toward what you asked for.",
+          "pad": 2.0
+        }
+      ]
+    }
+  ]
+}

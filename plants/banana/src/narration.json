@@ -1,0 +1,61 @@
+{
+  "_comment": "The whole voiceover script. Each scene is a list of lines; each line is one caption and one voice clip. `speech` (optional) is what the voice says when it should differ from the caption. `pad` (optional) adds extra seconds after the line so an animation can finish. Scene ids must match SCENE_COMPONENTS in src/BananaVideo.tsx; the scenes time their animations against these lines, so if you add or remove a line, check that scene too.",
+  "scenes": [
+    {
+      "id": "intro",
+      "title": "香蕉花的秘密",
+      "lines": [
+        { "text": "大家好！今天我們來看看香蕉樹。", "pad": 0.3 },
+        { "text": "認識香蕉花，還有怎麼用香蕉刀整理它。", "pad": 0.6 }
+      ]
+    },
+    {
+      "id": "tree",
+      "title": "一串串的香蕉",
+      "lines": [
+        { "text": "香蕉樹上，長著一串一串的香蕉。", "pad": 0.4 },
+        { "text": "一串香蕉由好幾「梳」組成，每一梳上有很多根香蕉。", "pad": 0.6 },
+        { "text": "在香蕉串的下面，垂著一個紫紅色的大花苞，這就是香蕉花。", "pad": 0.8 }
+      ]
+    },
+    {
+      "id": "flower",
+      "title": "特寫：香蕉花",
+      "lines": [
+        { "text": "我們來特寫香蕉花！", "pad": 0.8 },
+        { "text": "外面紫紅色的，是一片一片的苞片。", "pad": 0.4 },
+        { "text": "苞片會一片一片往上翻開，", "pad": 0.5 },
+        { "text": "下面藏著一排排細細長長的小花，像手指一樣。", "pad": 0.9 }
+      ]
+    },
+    {
+      "id": "grow",
+      "title": "空梳與花指",
+      "lines": [
+        { "text": "香蕉慢慢長大，變得又粗又飽滿。", "pad": 0.6 },
+        { "text": "這時，香蕉花上面的梗，也越拉越長。", "pad": 0.6 },
+        { "text": "梗上會出現「空梳」，就是沒有長出香蕉的梳。", "pad": 0.6 },
+        { "text": "還有「不結果的花指」，這些小花不會變成香蕉。", "pad": 0.6 },
+        { "text": "它們留在樹上，只會分走香蕉的養分。", "pad": 0.8 }
+      ]
+    },
+    {
+      "id": "cut",
+      "title": "用香蕉刀剪除",
+      "lines": [
+        { "text": "這時候，我們就可以拿出香蕉刀。", "pad": 0.4 },
+        { "text": "在最後一梳香蕉的下方一點點，", "pad": 0.6 },
+        { "text": "把空梳、花指，連同香蕉花一起剪除！", "pad": 2.2 }
+      ]
+    },
+    {
+      "id": "recap",
+      "title": "重點回顧",
+      "lines": [
+        { "text": "剪除之後，養分都留給香蕉，", "pad": 0.2 },
+        { "text": "香蕉就能長得又大又漂亮！", "pad": 0.8 },
+        { "text": "記住：看到空梳和花指，就用香蕉刀剪掉吧！", "pad": 1.6 }
+      ]
+    }
+  ]
+}
