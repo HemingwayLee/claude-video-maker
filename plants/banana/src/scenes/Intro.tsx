@@ -23,7 +23,6 @@ export const Intro: React.FC = () => {
   const farmerX = 880 + farmerIn * 400;
   const [hx, hy] = toScreen(cam, farmerX - 10, GROUND_Y - 470);
   const titlePop = pop(frame, fps, 12, 10);
-  const subPop = pop(frame, fps, L[1] + 4, 12);
   return (
     <AbsoluteFill>
       <World cam={cam} frame={frame}>
@@ -35,7 +34,7 @@ export const Intro: React.FC = () => {
         </g>
       </World>
 
-      <SpeechBubble x={hx - 60} y={hy - 40} text="大家好！" scale={pop(frame, fps, L[0] + 6, 11) * fadeOut(frame, L[1], 8)} tail={[70, 90]} />
+      <SpeechBubble x={hx - 60} y={hy - 40} text="♪" scale={pop(frame, fps, L[0] + 6, 11) * fadeOut(frame, L[1], 8)} tail={[70, 90]} />
 
       {/* title */}
       <div
@@ -52,32 +51,6 @@ export const Intro: React.FC = () => {
         <div style={{ fontSize: 150, fontWeight: 900, color: COLORS.yellow, textShadow: `${outline(INK, 12)}, 0 14px 0 ${INK}`, letterSpacing: 6 }}>
           香蕉花
         </div>
-        <div style={{ fontSize: 96, fontWeight: 900, color: "#fff", textShadow: `${outline(INK, 9)}, 0 10px 0 ${INK}`, marginTop: -10 }}>
-          的秘密
-        </div>
-      </div>
-      <div
-        style={{
-          position: "absolute",
-          left: 0,
-          right: 0,
-          top: 470,
-          display: "flex",
-          justifyContent: "center",
-          gap: 18,
-          fontFamily: FONT,
-          transform: `scale(${subPop})`,
-        }}
-      >
-        {[
-          ["空梳", COLORS.blue],
-          ["花指", "#9b5de5"],
-          ["香蕉刀", COLORS.red],
-        ].map(([t, c]) => (
-          <div key={t} style={{ padding: "8px 26px 12px", borderRadius: 40, background: c, border: `6px solid ${INK}`, color: "#fff", fontSize: 48, fontWeight: 900, boxShadow: `6px 6px 0 ${INK}` }}>
-            {t}
-          </div>
-        ))}
       </div>
 
       <svg width={1080} height={1920} style={{ position: "absolute", opacity: fade(frame, 20, 10) }}>

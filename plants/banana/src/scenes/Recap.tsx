@@ -2,7 +2,7 @@ import React from "react";
 import { AbsoluteFill, useCurrentFrame, useVideoConfig } from "remotion";
 import { fade, lerp, pop } from "../anim";
 import { BananaPlant } from "../components/BananaPlant";
-import { Farmer } from "../components/Farmer";
+import { BananaKnife, Farmer } from "../components/Farmer";
 import { Sfx, Sparkle } from "../components/Manga";
 import { Nutrients } from "../components/Nutrients";
 import { moveCam, toScreen, World } from "../components/World";
@@ -10,11 +10,10 @@ import { GROUND_Y, HAND_Y, LAST_HAND_Y, RACHIS_X } from "../plant";
 import { COLORS, FONT, INK, ROLE } from "../theme";
 import { useLines } from "../timeline";
 
-const POINTS: [string, string][] = [
-  ["香蕉串的下面，有紫紅色的香蕉花", ROLE.flower],
-  ["香蕉花 ＝ 苞片 ＋ 一排排小花", COLORS.orange],
-  ["梗上有「空梳」和「不結果的花指」", ROLE.finger],
-  ["用香蕉刀，在最後一梳下方剪除", ROLE.knife],
+// The recap panel: the two things to look for, then the tool to use.
+const PILLS: [string, string][] = [
+  ["空梳", ROLE.empty],
+  ["花指", ROLE.finger],
 ];
 
 // With the flower part gone, all the food goes to the bananas. Then a recap.
@@ -64,50 +63,56 @@ export const Recap: React.FC = () => {
         </g>
       </World>
 
-      {/* recap cards */}
+      {/* recap: 空梳 ＋ 花指 → banana knife */}
       {cards > 0 && (
-        <div style={{ position: "absolute", left: 40, right: 40, top: 200, fontFamily: FONT, opacity: cards }}>
-          {POINTS.map(([text, color], i) => {
-            const p = pop(frame, fps, L[2] + 6 + i * 12, 12);
+        <div
+          style={{
+            position: "absolute",
+            left: 60,
+            right: 60,
+            top: 220,
+            padding: "30px 20px",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            gap: 22,
+            fontFamily: FONT,
+            opacity: cards,
+            background: "#fff",
+            border: `8px solid ${INK}`,
+            borderRadius: 40,
+            boxShadow: `12px 12px 0 ${ROLE.knife}`,
+            transform: `scale(${0.8 + 0.2 * cards})`,
+          }}
+        >
+          {PILLS.map(([text, color], i) => {
+            const p = pop(frame, fps, L[2] + 6 + i * 12, 11);
             return (
               <div
-                key={i}
+                key={text}
                 style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 22,
-                  marginBottom: 22,
-                  padding: "18px 26px",
-                  background: "#fff",
-                  border: `6px solid ${INK}`,
-                  borderRadius: 28,
-                  boxShadow: `8px 8px 0 ${color}`,
-                  transform: `translateX(${(1 - p) * (i % 2 ? 300 : -300)}px) scale(${0.6 + 0.4 * p})`,
-                  opacity: Math.min(1, p * 1.5),
+                  padding: "14px 34px 18px",
+                  background: color,
+                  border: `7px solid ${INK}`,
+                  borderRadius: 50,
+                  boxShadow: `8px 8px 0 ${INK}`,
+                  color: "#fff",
+                  fontSize: 76,
+                  fontWeight: 900,
+                  transform: `scale(${p})`,
                 }}
               >
-                <div
-                  style={{
-                    flex: "0 0 auto",
-                    width: 72,
-                    height: 72,
-                    borderRadius: 36,
-                    background: color,
-                    border: `5px solid ${INK}`,
-                    color: "#fff",
-                    fontSize: 42,
-                    fontWeight: 900,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  {i + 1}
-                </div>
-                <div style={{ fontSize: 44, fontWeight: 900, color: INK, lineHeight: 1.3 }}>{text}</div>
+                {text}
               </div>
             );
           })}
+          <svg width={110} height={80} viewBox="-55 -40 110 80" style={{ transform: `scale(${pop(frame, fps, L[2] + 30, 11)})` }}>
+            <path d="M -45 0 L 30 0 M 8 -24 L 34 0 L 8 24" stroke={INK} strokeWidth={22} fill="none" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M -45 0 L 30 0 M 8 -24 L 34 0 L 8 24" stroke={COLORS.yellow} strokeWidth={11} fill="none" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          <svg width={150} height={240} viewBox="-170 -590 260 690" style={{ overflow: "visible", transform: `scale(${pop(frame, fps, L[2] + 40, 10)}) rotate(${-10 + Math.sin(frame / 6) * 6}deg)` }}>
+            <BananaKnife glow={0.5} />
+          </svg>
         </div>
       )}
     </AbsoluteFill>

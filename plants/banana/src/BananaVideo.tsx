@@ -1,7 +1,6 @@
 import React from "react";
 import { AbsoluteFill, Html5Audio, Sequence, staticFile, useCurrentFrame } from "remotion";
 import { fade, fadeOut } from "./anim";
-import { Caption, ProgressBar, SceneHeader } from "./components/Chrome";
 import { Cut } from "./scenes/Cut";
 import { Flower } from "./scenes/Flower";
 import { Grow } from "./scenes/Grow";
@@ -37,7 +36,8 @@ const SceneFade: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 };
 
 // The timeline: scenes back to back; inside each scene, one Sequence per
-// narration line holding its caption and voice clip.
+// narration line holding its voice clip. There are deliberately no
+// subtitles, chapter badges or progress bar: the pictures carry the story.
 export const BananaVideo: React.FC<BananaVideoProps> = ({ timeline }) => {
   return (
     <AbsoluteFill style={{ background: COLORS.skyBottom, fontFamily: FONT, color: COLORS.text }}>
@@ -49,18 +49,17 @@ export const BananaVideo: React.FC<BananaVideoProps> = ({ timeline }) => {
               <SceneFade>
                 <Scene />
               </SceneFade>
-              <SceneHeader />
             </SceneContext.Provider>
-            {scene.lines.map((line) => (
-              <Sequence key={line.key} from={line.from} durationInFrames={line.duration} name={line.key}>
-                {line.audio ? <Html5Audio src={staticFile(line.audio)} /> : null}
-                <Caption text={line.text} />
-              </Sequence>
-            ))}
+            {scene.lines.map((line) =>
+              line.audio ? (
+                <Sequence key={line.key} from={line.from} durationInFrames={line.duration} name={line.key}>
+                  <Html5Audio src={staticFile(line.audio)} />
+                </Sequence>
+              ) : null,
+            )}
           </Sequence>
         );
       })}
-      <ProgressBar timeline={timeline} />
     </AbsoluteFill>
   );
 };

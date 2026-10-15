@@ -91,12 +91,9 @@ export const Cut: React.FC = () => {
                   <Sparkle key={i} x={cut[0] + dx} y={cut[1] + dy} size={s * pop(frame, fps, landed + 18 + i * 4) * (0.7 + 0.3 * Math.sin(frame / 4 + i))} color={COLORS.yellow} rot={frame * 3} />
                 ))}
             </svg>
-            <Callout tx={blade[0]} ty={blade[1]} lx={820} ly={330} text="香蕉刀" sub="長柄・彎刀" color={ROLE.knife} progress={lerp(frame, [L[0] + 26, L[0] + 44], [0, 1]) * fadeOut(frame, L[1] - 2, 8)} size={58} />
-            <Callout tx={lastHand[0]} ty={lastHand[1]} lx={250} ly={lastHand[1] - 170} text="最後一梳" color={ROLE.bunch} progress={lerp(frame, [L[1] + 8, L[1] + 24], [0, 1]) * fadeOut(frame, L[2] + 6, 6)} size={46} />
-            <Callout tx={cut[0] - 30} ty={cut[1] + 6} lx={240} ly={cut[1] + 200} text="剪這裡！" sub="下方一點點" color={ROLE.knife} progress={lerp(frame, [L[1] + 26, L[1] + 42], [0, 1]) * fadeOut(frame, L[2] + 6, 6)} size={52} />
+            <Callout tx={blade[0]} ty={blade[1]} lx={820} ly={330} text="香蕉刀" color={ROLE.knife} progress={lerp(frame, [L[0] + 26, L[0] + 44], [0, 1]) * fadeOut(frame, L[1] - 2, 8)} size={58} />
             {isCut && <Sfx text="咔嚓！" x={cut[0] + 200} y={cut[1] - 240} size={140} color={COLORS.yellow} rot={-12} scale={pop(frame, fps, cutFrame, 8)} opacity={fadeOut(frame, cutFrame + 34, 10)} />}
             {frame >= landed && <Sfx text="咚！" x={landing[0] - 40} y={landing[1] - 170} size={100} color={COLORS.orange} rot={8} scale={pop(frame, fps, landed, 8)} opacity={fadeOut(frame, landed + 30, 10)} />}
-            {frame >= landed + 24 && <Sfx text="完成！" x={800} y={760} size={120} color={COLORS.pink} rot={-6} scale={pop(frame, fps, landed + 24, 9)} />}
           </>
         }
       >

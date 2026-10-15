@@ -39,8 +39,8 @@ export const Flower: React.FC = () => {
           <>
             <FocusLines frame={frame} cx={center[0]} cy={center[1]} opacity={zoomBurst + 0.35 * fade(frame, 40, 20)} />
             <Sfx text="特寫！" x={790} y={360} size={130} color={COLORS.pink} rot={-10} scale={pop(frame, fps, 14, 9)} opacity={fadeOut(frame, L[1] + 10, 10)} />
-            <Callout tx={bractSide[0]} ty={bractSide[1]} lx={820} ly={bractSide[1] + 200} text="苞片" sub="紫紅色・一片一片" color={ROLE.flower} progress={lerp(frame, [L[1] + 6, L[1] + 24], [0, 1])} size={60} />
-            <Callout tx={florets[0]} ty={florets[1]} lx={300} ly={300} text="小花" sub="細細長長，像手指" color={COLORS.orange} progress={lerp(frame, [L[3] + 22, L[3] + 40], [0, 1])} size={60} />
+            <Callout tx={bractSide[0]} ty={bractSide[1]} lx={820} ly={bractSide[1] + 200} text="苞片" color={ROLE.flower} progress={lerp(frame, [L[1] + 6, L[1] + 24], [0, 1])} size={60} />
+            <Callout tx={florets[0]} ty={florets[1]} lx={300} ly={300} text="小花" color={COLORS.orange} progress={lerp(frame, [L[3] + 22, L[3] + 40], [0, 1])} size={60} />
             <svg width={1080} height={1920} style={{ position: "absolute", opacity: fade(frame, L[3] + 30, 10) }}>
               {[
                 [-260, -280, 34],

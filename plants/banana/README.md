@@ -1,11 +1,16 @@
 # 香蕉花的秘密: banana flowers, 空梳 and 花指 (9:16 video)
 
 A 1 min 42 s, **1080×1920 (9:16, vertical)**, 30 fps MP4 for Shorts / Reels /
-TikTok, narrated in Taiwanese Mandarin with Traditional Chinese captions. It
+TikTok, narrated in Taiwanese Mandarin. It
 is drawn in an **anime / manga style** (flat cel shading, thick outlines,
 manga focus lines, sound-effect text and a chibi farmer). The whole video is
 **made with code** using [Remotion](https://www.remotion.dev/) (React → video).
 There is no image or video footage: every frame is SVG drawn by the files in `src/`.
+
+The video has **no subtitles, no chapter badges and no progress bar**, and
+very little text on screen. The voice carries the explanation; the screen only
+shows the title, short labels on the key parts (一串・一梳・一根・香蕉花・苞片・
+小花・空梳・不結果的花指・香蕉刀) and manga sound effects (特寫！ 咔嚓！ 咚！).
 
 It tells this story:
 
@@ -14,14 +19,16 @@ It tells this story:
 
 | Time      | #  | Scene          | Visual aid                                                                                 |
 | --------- | -- | -------------- | ------------------------------------------------------------------------------------------ |
-| 0:00–0:10 |    | 香蕉花的秘密    | The plant springs up, the farmer waves 「大家好！」, title and keyword chips (空梳・花指・香蕉刀) |
-| 0:10–0:28 | 1  | 一串串的香蕉    | Dashed box = 一串; one hand glows = 一梳; one banana glows = 一根; 「一串 ＞ 一梳 ＞ 一根」; pointer to the purple 香蕉花 |
+| 0:00–0:10 |    | 香蕉花的秘密    | The plant springs up, the farmer waves with a 「♪」 bubble, title 香蕉花 |
+| 0:10–0:28 | 1  | 一串串的香蕉    | Dashed box = 一串; one hand glows = 一梳; one banana glows = 一根; pointer to the purple 香蕉花 |
 | 0:28–0:46 | 2  | 特寫：香蕉花    | Zoom with manga focus lines and 「特寫！」; label 苞片; the bracts flip up one by one and show the rows of 小花 |
-| 0:46–1:12 | 3  | 空梳與花指      | 「幾個星期後⋯」 clock: bananas fatten; the stalk stretches (arrow 「越拉越長」); 空梳 and 不結果的花指 circled and labeled; nutrient drops turn red past the last hand: 「搶養分！」 |
-| 1:12–1:28 | 4  | 用香蕉刀剪除    | Farmer with the 香蕉刀 (labeled); 「最後一梳」 and a blinking cut line 「剪這裡！」; the swing, slash and 「咔嚓！」; the stalk, 空梳, 花指 and flower fall together 「咚！」 |
-| 1:28–1:42 | 5  | 重點回顧        | Food now goes only to the bananas, which grow bigger: 「又大又漂亮！」; four recap cards |
+| 0:46–1:12 | 3  | 空梳與花指      | A spinning clock (time passes): bananas fatten; the stalk stretches (double arrow); 空梳 and 不結果的花指 circled and labeled; nutrient drops turn red past the last hand: 「搶養分！」 |
+| 1:12–1:28 | 4  | 用香蕉刀剪除    | Farmer with the 香蕉刀 (labeled); a blinking cut line just below the last hand; the swing, slash and 「咔嚓！」; the stalk, 空梳, 花指 and flower fall together 「咚！」 |
+| 1:28–1:42 | 5  | 重點回顧        | Food now goes only to the bananas, which grow bigger: 「又大又漂亮！」; a recap card: 「空梳」「花指」 → banana knife |
 
 The video in `out/banana-flower.mp4` was rendered from this folder as it is.
+`out/banana-flower-with-captions.mp4` is an earlier version that still had
+captions, chapter badges and a progress bar; the code for it is no longer here.
 
 ---
 
@@ -33,7 +40,7 @@ The video in `out/banana-flower.mp4` was rendered from this folder as it is.
   and ships its own ffmpeg, so nothing else is needed to render.
 - macOS for the voiceover: it uses the built-in `say` text-to-speech command
   with the Taiwanese voice **Meijia**. Without it the video still renders,
-  with captions but no sound (see 1.3).
+  but silent (see 1.3).
 
 ```bash
 cd plants/banana
@@ -54,13 +61,13 @@ npx remotion render BananaFlower out/preview.mp4 --scale=0.5 # quick 540×960 pr
 
 ### 1.1 Changing the words
 
-Everything that is said and captioned is in **`src/narration.json`**: one
-entry per scene, one line per caption/voice clip. Edit the text, run
+Everything that is said is in **`src/narration.json`**: one
+entry per scene, one line per voice clip (the text is spoken, never shown). Edit the text, run
 `npm run voiceover` again, then `npm run render`. The length of every scene
 follows the length of its voice clips, so the pictures stay in sync.
 
-- `speech` (optional): what the voice should say when it differs from the
-  caption (for example to fix a pronunciation).
+- `speech` (optional): what the voice should say when it differs from
+  `text` (for example to fix a pronunciation).
 - `pad` (optional): extra seconds of silence after a line, so an animation
   can finish (the cut scene uses this for the falling flower).
 
@@ -83,7 +90,7 @@ under Chinese (Taiwan)). Then pass their name in `VOICE`.
 ### 1.3 No Mac, or no voice wanted
 
 Skip `npm run voiceover` (or delete `public/voice/`). The video renders
-silent with captions, and each line's time is estimated from its number of
+silent, and each line's time is estimated from its number of
 characters (4.3 per second).
 
 To use another text-to-speech tool or a recorded human voice, write one WAV
@@ -115,7 +122,7 @@ downloaded could not start. Try these in order:
    Or, with regular Google Chrome:
    `BROWSER_EXECUTABLE="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" npm run render`
 
-**Chinese text shows as boxes**: the captions use the PingFang TC font that
+**Chinese text shows as boxes**: the labels use the PingFang TC font that
 ships with macOS (then Heiti TC, Noto Sans TC, Microsoft JhengHei). On
 Linux, install a Traditional Chinese font, for example `fonts-noto-cjk`.
 
@@ -132,11 +139,11 @@ plants/banana/
 ├── public/voice/           # generated voice clips (git-ignored)
 ├── out/                    # the rendered video and thumbnail (git-ignored)
 └── src/
-    ├── narration.json      # THE SCRIPT: every caption / spoken line, per scene
+    ├── narration.json      # THE SCRIPT: every spoken line, per scene
     ├── timeline.ts         # turns the script + clip lengths into frame numbers
     ├── index.ts            # entry point: registerRoot()
     ├── Root.tsx            # <Composition>: 1080×1920, 30 fps, length from the voice
-    ├── BananaVideo.tsx     # puts the scenes, captions and audio on the timeline
+    ├── BananaVideo.tsx     # puts the scenes and audio on the timeline
     ├── plant.ts            # geometry of the banana plant (hands, stalk, nodes, leaves)
     ├── theme.ts            # anime palette, one color per idea, font, text outline
     ├── anim.ts             # fade / pop / lerp animation helpers
@@ -146,8 +153,7 @@ plants/banana/
     │   ├── BananaBud.tsx   # the banana flower: bracts that flip open, rows of 小花
     │   ├── Farmer.tsx      # the chibi farmer and the banana knife (香蕉刀)
     │   ├── Nutrients.tsx   # the nutrient drops that travel down the stalk
-    │   ├── Manga.tsx       # focus lines, sparkles, sound-effect text, bubbles, callouts
-    │   └── Chrome.tsx      # chapter badge, captions, progress bar
+    │   └── Manga.tsx       # focus lines, sparkles, sound-effect text, bubbles, callouts
     └── scenes/             # one file per scene, in video order
         ├── Intro.tsx  Tree.tsx  Flower.tsx
         └── Grow.tsx  Cut.tsx  Recap.tsx
@@ -203,7 +209,7 @@ on screen, so a label stays stuck to its target while the camera moves.
   white highlight. Bananas are thick stroked curves drawn three times
   (outline, color, shade + shine).
 - **Manga effects** (`Manga.tsx`): 集中線 focus lines for the close-up,
-  four-point sparkles, big tilted sound-effect words (特寫！ 咔嚓！ 咚！ 完成！)
+  four-point sparkles, big tilted sound-effect words (特寫！ 咔嚓！ 咚！)
   with an outline and drop shadow, a white flash between scenes.
 - **Colors carry meaning** (`ROLE` in `theme.ts`): yellow = the bunch,
   pink = the flower, blue = 空梳, purple = 花指, red = the knife and the cut.
@@ -211,7 +217,8 @@ on screen, so a label stays stuck to its target while the camera moves.
 
 ### 3.5 Vertical-video layout
 
-The frame is 1080×1920. The chapter badge sits at the top, captions are
-large (62 px, white with a thick outline) and sit about 300 px above the
-bottom edge, which apps such as YouTube Shorts and TikTok cover with their
-own buttons. The progress bar is along the top edge for the same reason.
+The frame is 1080×1920. Nothing important is placed in the bottom ~300 px,
+which apps such as YouTube Shorts and TikTok cover with their own buttons.
+There are no captions; if you want them back, render a caption inside each
+line's `<Sequence>` in `BananaVideo.tsx` (`timeline.scenes[].lines[].text`
+holds the words and timing).

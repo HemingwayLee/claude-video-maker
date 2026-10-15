@@ -58,11 +58,8 @@ export const Grow: React.FC = () => {
               {empties.map((p, i) => <React.Fragment key={i}>{ring(p, ROLE.empty, emptyShow, 62)}</React.Fragment>)}
               {fingers.map((p, i) => <React.Fragment key={i}>{ring(p, ROLE.finger, fingerShow, 56)}</React.Fragment>)}
             </svg>
-            {stretchShow > 0 && (
-              <Sfx text="越拉越長" x={arrowTop[0] + 150} y={(arrowTop[1] + arrowBottom[1]) / 2} size={62} color={COLORS.yellow} rot={8} opacity={stretchShow} scale={pop(frame, fps, L[1] + 6, 10)} />
-            )}
-            <Callout tx={empties[0][0] + 50} ty={empties[0][1]} lx={850} ly={empties[0][1] - 120} text="空梳" sub="沒有長出香蕉的梳" color={ROLE.empty} progress={lerp(frame, [L[2] + 10, L[2] + 28], [0, 1])} size={58} />
-            <Callout tx={fingers[1][0] - 50} ty={fingers[1][1]} lx={250} ly={fingers[1][1] + 160} text="不結果的花指" sub="小花不會變成香蕉" color={ROLE.finger} progress={lerp(frame, [L[3] + 10, L[3] + 28], [0, 1])} size={52} />
+            <Callout tx={empties[0][0] + 50} ty={empties[0][1]} lx={850} ly={empties[0][1] - 120} text="空梳" color={ROLE.empty} progress={lerp(frame, [L[2] + 10, L[2] + 28], [0, 1])} size={58} />
+            <Callout tx={fingers[1][0] - 50} ty={fingers[1][1]} lx={250} ly={fingers[1][1] + 160} text="不結果的花指" color={ROLE.finger} progress={lerp(frame, [L[3] + 10, L[3] + 28], [0, 1])} size={52} />
             <Nutrients frame={frame - L[4]} cam={cam} bottom={budTop(g)} show={fade(frame, L[4], 8)} />
             {frame > L[4] && (
               <Sfx text="搶養分！" x={830} y={toScreen(cam, 0, budTop(g))[1] - 40} size={76} color={COLORS.red} rot={-8} scale={pop(frame, fps, L[4] + 26, 9)} />
@@ -90,7 +87,7 @@ const TimeBadge: React.FC<{ frame: number; show: number }> = ({ frame, show }) =
         display: "flex",
         alignItems: "center",
         gap: 14,
-        padding: "10px 24px 10px 14px",
+        padding: 10,
         background: "#fff",
         border: `6px solid ${INK}`,
         borderRadius: 50,
@@ -107,7 +104,6 @@ const TimeBadge: React.FC<{ frame: number; show: number }> = ({ frame, show }) =
         <line x1={0} y1={0} x2={0} y2={-17} stroke={INK} strokeWidth={5} strokeLinecap="round" transform={`rotate(${a})`} />
         <line x1={0} y1={0} x2={0} y2={-11} stroke={INK} strokeWidth={5} strokeLinecap="round" transform={`rotate(${a / 12})`} />
       </svg>
-      幾個星期後⋯
     </div>
   );
 };

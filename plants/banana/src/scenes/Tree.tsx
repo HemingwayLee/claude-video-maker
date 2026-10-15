@@ -56,10 +56,10 @@ export const Tree: React.FC = () => {
                 strokeDashoffset={-frame * 2}
               />
             </svg>
-            <Callout tx={bunchTop[0] - 10} ty={bunchTop[1] + 120} lx={880} ly={bunchTop[1] - 70} text="一串" sub="香蕉" color={ROLE.bunch} progress={lerp(frame, [12, 28], [0, 1]) * fadeOut(frame, L[1] - 4, 8)} />
-            <Callout tx={handEdge[0]} ty={handEdge[1]} lx={870} ly={handEdge[1] + 210} text="一梳" sub="一排香蕉" color={ROLE.bunch} progress={lerp(frame, [L[1] + 14, L[1] + 30], [0, 1]) * fadeOut(frame, L[2], 8)} />
-            <Callout tx={finger[0]} ty={finger[1]} lx={890} ly={finger[1] - 190} text="一根" sub="一條香蕉" color={COLORS.orange} progress={lerp(frame, [L[1] + 52, L[1] + 68], [0, 1]) * fadeOut(frame, L[2], 8)} />
-            <Callout tx={bud[0]} ty={bud[1]} lx={850} ly={bud[1] - 220} text="香蕉花" sub="紫紅色的大花苞" color={ROLE.flower} progress={lerp(frame, [L[2] + 34, L[2] + 52], [0, 1])} size={58} />
+            <Callout tx={bunchTop[0] - 10} ty={bunchTop[1] + 120} lx={880} ly={bunchTop[1] - 70} text="一串" color={ROLE.bunch} progress={lerp(frame, [12, 28], [0, 1]) * fadeOut(frame, L[1] - 4, 8)} />
+            <Callout tx={handEdge[0]} ty={handEdge[1]} lx={870} ly={handEdge[1] + 210} text="一梳" color={ROLE.bunch} progress={lerp(frame, [L[1] + 14, L[1] + 30], [0, 1]) * fadeOut(frame, L[2], 8)} />
+            <Callout tx={finger[0]} ty={finger[1]} lx={890} ly={finger[1] - 190} text="一根" color={COLORS.orange} progress={lerp(frame, [L[1] + 52, L[1] + 68], [0, 1]) * fadeOut(frame, L[2], 8)} />
+            <Callout tx={bud[0]} ty={bud[1]} lx={850} ly={bud[1] - 220} text="香蕉花" color={ROLE.flower} progress={lerp(frame, [L[2] + 34, L[2] + 52], [0, 1])} size={58} />
             <svg width={1080} height={1920} style={{ position: "absolute", opacity: fade(frame, L[2] + 40, 10) }}>
               {[
                 [-130, -70, 26],
@@ -74,25 +74,6 @@ export const Tree: React.FC = () => {
       >
         <BananaPlant frame={frame} highlightHand={{ hand: HAND, alpha: handGlow }} highlightFinger={{ hand: 1, alpha: fingerGlow }} />
       </World>
-      {/* legend of the counting words, bottom-left during line 1 */}
-      <div
-        style={{
-          position: "absolute",
-          left: 40,
-          top: 210,
-          opacity: fade(frame, L[1] + 70, 10) * fadeOut(frame, L[2], 8),
-          background: "#fff",
-          border: `6px solid ${INK}`,
-          borderRadius: 24,
-          padding: "14px 26px",
-          fontSize: 44,
-          fontWeight: 900,
-          color: INK,
-          boxShadow: `8px 8px 0 ${ROLE.bunch}`,
-        }}
-      >
-        一串 ＞ 一梳 ＞ 一根
-      </div>
     </AbsoluteFill>
   );
 };
