@@ -1,0 +1,23 @@
+{
+  "name": "street-dance-video",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A 15-second vertical (9:16) street-dance clip of the sticker girl, built with Remotion",
+  "scripts": {
+    "sprites": "python3 tools/extract_sprites.py",
+    "music": "node tools/music.mjs",
+    "studio": "remotion studio",
+    "render": "remotion render StreetDance out/street-dance.mp4",
+    "still": "remotion still StreetDance out/thumbnail.png --frame=240"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.534",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "remotion": "4.0.534"
+  },
+  "devDependencies": {
+    "@types/react": "19.1.8",
+    "typescript": "5.8.3"
+  }
+}
