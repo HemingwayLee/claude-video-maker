@@ -1,0 +1,46 @@
+{
+  "_comment": "The whole voiceover script. Each scene is a list of lines; each line is one voice clip (it is spoken, never shown). `speech` (optional) is what the voice says when it should differ from `text`. `pad` (optional) adds extra seconds after the line so an animation can finish. Scene ids must match SCENE_COMPONENTS in src/PassionFruitVideo.tsx; the scenes time their animations against these lines, so if you add or remove a line, check that scene too.",
+  "scenes": [
+    {
+      "id": "intro",
+      "title": "百香果",
+      "lines": [
+        { "text": "大家好！你吃過百香果嗎？", "pad": 0.4 },
+        { "text": "切開來，是金黃色的果肉，酸酸甜甜，香氣十足！", "pad": 0.8 }
+      ]
+    },
+    {
+      "id": "arrival",
+      "title": "日本人引進",
+      "lines": [
+        { "text": "你知道嗎？百香果最初，是日本人引進台灣的。", "pad": 0.6 },
+        { "text": "在日治時期，日本人把百香果帶到台灣來種植。", "pad": 1.0 }
+      ]
+    },
+    {
+      "id": "fengshan",
+      "title": "鳳山農業試驗所",
+      "lines": [
+        { "text": "後來，百香果來到了高雄的鳳山農業試驗所，", "speech": "後來，百香果來到了高雄的，鳳山農業試驗所，", "pad": 0.6 },
+        { "text": "由這裡的研究人員，繼續培育改良。", "pad": 0.6 }
+      ]
+    },
+    {
+      "id": "breed",
+      "title": "培育而成",
+      "lines": [
+        { "text": "他們細心照顧，一次又一次地試驗，", "pad": 0.8 },
+        { "text": "終於培育出適合在台灣種植的好百香果！", "pad": 1.2 }
+      ]
+    },
+    {
+      "id": "today",
+      "title": "百香果的故事",
+      "lines": [
+        { "text": "所以說，百香果最初是日本人引進台灣，", "pad": 0.3 },
+        { "text": "由鳳山農業試驗所培育而成。", "speech": "由，鳳山農業試驗所，培育而成。", "pad": 0.6 },
+        { "text": "現在，在台灣到處都吃得到香甜的百香果喔！", "pad": 1.8 }
+      ]
+    }
+  ]
+}

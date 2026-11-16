@@ -1,0 +1,47 @@
+{
+  "_comment": "The whole voiceover script. Each scene is a list of lines; each line is one voice clip (it is spoken, never shown). `speech` (optional) is what the voice says when it should differ from `text`. `pad` (optional) adds extra seconds after the line so an animation can finish. Scene ids must match SCENE_COMPONENTS in src/StrawberryVideo.tsx; the scenes time their animations against these lines, so if you add or remove a line, check that scene too.",
+  "scenes": [
+    {
+      "id": "intro",
+      "title": "草莓的種子在哪裡",
+      "lines": [
+        { "text": "大家好！你看，這是一顆紅通通的草莓。", "pad": 0.3 },
+        { "text": "你知道，草莓的種子在哪裡嗎？", "pad": 1.0 }
+      ]
+    },
+    {
+      "id": "achene",
+      "title": "瘦果",
+      "lines": [
+        { "text": "仔細看，草莓表面有一粒一粒的小顆粒。", "pad": 0.5 },
+        { "text": "很多人以為，這就是草莓的種子。", "pad": 0.4 },
+        { "text": "其實，這些小顆粒的學名，叫做「瘦果」。", "speech": "其實，這些小顆粒的學名，叫做，瘦果。", "pad": 1.0 }
+      ]
+    },
+    {
+      "id": "seed",
+      "title": "真正的種子",
+      "lines": [
+        { "text": "我們拿一粒瘦果，放大來看看。", "pad": 0.8 },
+        { "text": "原來，每一粒瘦果的裡面，", "pad": 0.3 },
+        { "text": "才包裹著真正的「種子」！", "speech": "才包裹著，真正的種子！", "pad": 1.2 }
+      ]
+    },
+    {
+      "id": "sprout",
+      "title": "冒出芽來",
+      "lines": [
+        { "text": "如果我們把草莓，放久一點，", "pad": 2.4 },
+        { "text": "就可以看到，草莓表面的小顆粒，冒出芽來喔！", "pad": 1.6 }
+      ]
+    },
+    {
+      "id": "outro",
+      "title": "種子藏在瘦果裡",
+      "lines": [
+        { "text": "所以，草莓的種子，就藏在每一粒瘦果的裡面！", "pad": 0.6 },
+        { "text": "下次吃草莓的時候，記得仔細看一看喔！", "pad": 1.6 }
+      ]
+    }
+  ]
+}

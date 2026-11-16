@@ -1,0 +1,62 @@
+{
+  "_comment": "The whole voiceover script. Each scene is a list of lines; each line is one voice clip (it is spoken, never shown). `speech` (optional) is what the voice says when it should differ from `text`. `pad` (optional) adds extra seconds after the line so an animation can finish. Scene ids must match SCENE_COMPONENTS in src/PumpkinVideo.tsx; the scenes time their animations against these lines, so if you add or remove a line, check that scene too.",
+  "scenes": [
+    {
+      "id": "intro",
+      "title": "小黑南瓜",
+      "lines": [
+        { "text": "大家好！今天要介紹一種很可愛的南瓜，", "pad": 0.2 },
+        { "text": "它的名字叫做「小黑」！", "pad": 0.8 }
+      ]
+    },
+    {
+      "id": "what",
+      "title": "台灣的栗子南瓜",
+      "lines": [
+        { "text": "「小黑」是台灣育種的，小型栗子南瓜品種。", "pad": 0.6 },
+        { "text": "它小小一顆，切開是金黃色的果肉，", "pad": 0.5 },
+        { "text": "吃起來鬆鬆綿綿，有栗子的香味，所以叫做栗子南瓜。", "pad": 0.8 }
+      ]
+    },
+    {
+      "id": "similar",
+      "title": "小黑與貝貝",
+      "lines": [
+        { "text": "它跟中國的「貝貝南瓜」十分相似，", "pad": 0.5 },
+        { "text": "「貝貝南瓜」也是一種栗子南瓜。", "pad": 0.9 }
+      ]
+    },
+    {
+      "id": "climate",
+      "title": "北海道與台灣",
+      "lines": [
+        { "text": "栗子南瓜，是在北海道培育的品種，", "pad": 0.4 },
+        { "text": "所以比較適合冷涼的氣候。", "pad": 0.8 },
+        { "text": "在炎熱的台灣，就不太容易種植成功。", "pad": 1.0 }
+      ]
+    },
+    {
+      "id": "improved",
+      "title": "為台灣改良",
+      "lines": [
+        { "text": "但是「小黑南瓜」，有針對台灣炎熱的氣候做改良，", "pad": 0.6 },
+        { "text": "所以種植成功的機率，會比較高一些！", "pad": 1.4 }
+      ]
+    },
+    {
+      "id": "season",
+      "title": "種植季節",
+      "lines": [
+        { "text": "「小黑南瓜」建議的種植季節，是秋天和冬天，", "pad": 0.6 },
+        { "text": "也就是十月，到隔年的二月。", "pad": 1.2 }
+      ]
+    },
+    {
+      "id": "outro",
+      "title": "一起種小黑",
+      "lines": [
+        { "text": "秋冬到了，一起來種「小黑南瓜」吧！", "pad": 1.6 }
+      ]
+    }
+  ]
+}

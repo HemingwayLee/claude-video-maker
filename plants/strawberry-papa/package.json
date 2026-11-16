@@ -1,0 +1,24 @@
+{
+  "name": "strawberry-papa-video",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A narrated 9:16 cartoon video about where a strawberry's seeds are, built with Remotion (React)",
+  "scripts": {
+    "papa": "node scripts/cut-papa.mjs",
+    "voiceover": "node scripts/voiceover.mjs",
+    "studio": "remotion studio",
+    "render": "remotion render StrawberrySeeds out/strawberry-papa.mp4",
+    "still": "remotion still StrawberrySeeds out/thumbnail.png --frame=150"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.534",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "remotion": "4.0.534"
+  },
+  "devDependencies": {
+    "@types/react": "19.1.8",
+    "sharp": "0.34.3",
+    "typescript": "5.8.3"
+  }
+}

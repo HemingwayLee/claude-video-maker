@@ -1,0 +1,51 @@
+{
+  "_comment": "The whole voiceover script. Each scene is a list of lines; each line is one voice clip (it is spoken, never shown). `speech` (optional) is what the voice says when it should differ from `text`. `pad` (optional) adds extra seconds after the line so an animation can finish. Scene ids must match SCENE_COMPONENTS in src/SweetPotatoVideo.tsx; the scenes time their animations against these lines, so if you add or remove a line, check that scene too.",
+  "scenes": [
+    {
+      "id": "intro",
+      "title": "地瓜葉水培法",
+      "lines": [
+        { "text": "大家好！今天教大家一個保存地瓜葉的小妙招。", "pad": 0.8 }
+      ]
+    },
+    {
+      "id": "cut",
+      "title": "剛剪下的枝條",
+      "lines": [
+        { "text": "從菜園剛剪下來的地瓜葉枝條，", "pad": 0.6 },
+        { "text": "如果就這樣放著，很快就會軟掉、枯萎。", "pad": 1.0 }
+      ]
+    },
+    {
+      "id": "water",
+      "title": "插在水裡",
+      "lines": [
+        { "text": "最有效的方法，就是把它插在水裡，", "pad": 0.6 },
+        { "text": "這就是「水培法」。", "pad": 1.0 }
+      ]
+    },
+    {
+      "id": "fresh",
+      "title": "保持新鮮",
+      "lines": [
+        { "text": "這不僅能讓地瓜葉保持新鮮，", "pad": 0.4 },
+        { "text": "還能防止它枯萎。", "pad": 1.2 }
+      ]
+    },
+    {
+      "id": "roots",
+      "title": "發根生長",
+      "lines": [
+        { "text": "過了幾天，它甚至會開始發根，", "pad": 1.0 },
+        { "text": "還會長出新的葉子，繼續生長！", "pad": 1.2 }
+      ]
+    },
+    {
+      "id": "outro",
+      "title": "試試看",
+      "lines": [
+        { "text": "簡單又有效，大家也來試試看吧！", "pad": 1.6 }
+      ]
+    }
+  ]
+}
