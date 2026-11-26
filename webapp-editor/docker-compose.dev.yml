@@ -1,0 +1,82 @@
+# Dev stack with hot reload: uvicorn --reload for the backend, Vite HMR for the frontend.
+# Host ports differ from info-center's (5432/8765/5678/8081) so both can run at once.
+name: webapp-editor
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-app}
+      POSTGRES_DB: ${POSTGRES_DB:-app}
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-app}@db:5432/${POSTGRES_DB:-app}
+      WATCHFILES_FORCE_POLLING: "true"
+      # Set one of these in .env: an OAuth token uses your Claude Pro/Max plan, an API key bills the API.
+      CLAUDE_CODE_OAUTH_TOKEN: ${CLAUDE_CODE_OAUTH_TOKEN:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      CLAUDE_WORKSPACE: /workspace
+      # Keep Claude Code's session transcripts so conversations can resume after restarts.
+      CLAUDE_CONFIG_DIR: /claude-config
+      MAX_CONCURRENT_TURNS: ${MAX_CONCURRENT_TURNS:-3}
+      # Speech-to-text model Claude Code uses to transcribe videos with no captions (tiny/base/small/medium/large-v3).
+      WHISPER_MODEL: ${WHISPER_MODEL:-small}
+      HF_HOME: /models
+    ports:
+      - "127.0.0.1:8766:8765"
+    volumes:
+      - ./backend:/app
+      # The directory Claude Code works in (reads, writes, runs commands). Set WORKSPACE_DIR in .env to change it.
+      - ${WORKSPACE_DIR:-./workspace}:/workspace
+      - claude-config:/claude-config
+      # Downloaded Whisper models, kept across rebuilds.
+      - models:/models
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    environment:
+      API_PROXY_TARGET: http://backend:8765
+      VITE_USE_POLLING: "true"
+    ports:
+      - "127.0.0.1:5679:5679"
+    volumes:
+      - ./frontend:/app
+      # Keep the container's node_modules instead of the (possibly empty) host one.
+      - /app/node_modules
+    depends_on:
+      - backend
+
+  # Database browser (tables, rows, SQL) at http://localhost:8082. Localhost only: pgweb has no login.
+  pgweb:
+    image: sosedoff/pgweb:0.17.0
+    environment:
+      PGWEB_DATABASE_URL: postgres://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-app}@db:5432/${POSTGRES_DB:-app}?sslmode=disable
+    ports:
+      - "127.0.0.1:8082:8081"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+  claude-config:
+  models:
