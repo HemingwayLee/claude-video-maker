@@ -8,7 +8,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy import select, text, update
 from sqlalchemy.orm import Session
 
-from app import animations, jobs, models, schemas, videos
+from app import animations, exports, jobs, materials, models, schemas, videos
 from app.claude import MODELS
 from app.config import settings
 from app.db import Base, engine, get_db
@@ -23,6 +23,7 @@ async def lifespan(_: FastAPI):
     # create_all doesn't add columns to existing tables; add ones introduced later.
     with engine.begin() as conn:
         conn.execute(text("ALTER TABLE videos ADD COLUMN IF NOT EXISTS segments JSON"))
+        conn.execute(text("ALTER TABLE videos ADD COLUMN IF NOT EXISTS overlays JSON"))
     if count := jobs.recover_interrupted():
         logger.warning("Marked %d answers interrupted by a restart as errors", count)
     if count := videos.recover_interrupted():
@@ -46,6 +47,8 @@ app.add_middleware(
 
 app.include_router(videos.router)
 app.include_router(animations.router)
+app.include_router(materials.router)
+app.include_router(exports.router)
 
 
 def _get_conversation(db: Session, conversation_id: int) -> models.Conversation:

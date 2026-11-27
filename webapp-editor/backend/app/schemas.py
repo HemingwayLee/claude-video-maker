@@ -70,6 +70,7 @@ class VideoRead(BaseModel):
     # What's happening right now while downloading or transcribing, for the UI.
     stage: str | None = None
     segments: list[list[float]] | None = None
+    overlays: list[dict[str, Any]] | None = None
     # True when the subtitles were edited in the editor (the original is kept, for Reset).
     subtitles_edited: bool = False
 
@@ -88,6 +89,33 @@ class Cue(BaseModel):
     text: str = Field(max_length=2000)
 
 
+class OverlaySource(BaseModel):
+    type: Literal["animation", "material"]
+    id: int
+
+
+class OverlayClip(BaseModel):
+    """A piece of a material on an extra track: `duration` seconds of it, from `in`, placed at `start`."""
+
+    id: int
+    source: OverlaySource
+    name: str = Field(default="", max_length=300)
+    start: float = Field(ge=0)
+    in_: float = Field(default=0, ge=0, alias="in")
+    duration: float = Field(gt=0)
+    source_duration: float | None = Field(default=None, gt=0)
+    muted: bool = False
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class OverlayTrack(BaseModel):
+    id: int
+    kind: Literal["video", "audio"]
+    muted: bool = False
+    clips: list[OverlayClip] = Field(default_factory=list, max_length=500)
+
+
 class VideoEdit(BaseModel):
     """Editor state to save. Omitted fields are left as they are."""
 
@@ -95,6 +123,8 @@ class VideoEdit(BaseModel):
     segments: list[tuple[float, float]] | None = Field(default=None, max_length=5000)
     # The full, edited subtitle list (source time). Rewrites subtitles.srt; the first edit keeps the original.
     cues: list[Cue] | None = Field(default=None, max_length=20000)
+    # The extra tracks (timeline time); [] removes them all.
+    overlays: list[OverlayTrack] | None = Field(default=None, max_length=50)
 
 
 class VideoUpdate(BaseModel):
@@ -190,3 +220,19 @@ class AnimationRead(BaseModel):
 
 class AnimationDetail(AnimationRead):
     activity: list[dict[str, Any]] = []
+
+
+class MaterialRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    uuid: UUID
+    video_id: int
+    name: str
+    kind: str
+    size_bytes: int | None
+    duration_s: float | None
+    width: int | None
+    height: int | None
+    created_at: datetime
+    has_thumbnail: bool = False

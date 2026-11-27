@@ -16,12 +16,12 @@ const withIds = (cues) => cues.map((c) => ({ id: nextCueId++, start: c.start, en
  * on every move. `fn` gets the current state and returns the next one (or the same object for "no change").
  */
 export default function useVideoEdit({ video, sourceDuration, loadedCues, onSaved, onError }) {
-  const [state, setState] = useState({ segments: null, cues: [] });
+  const [state, setState] = useState({ segments: null, cues: [], overlays: video.overlays ?? [] });
   const history = useRef({ past: [], future: [] });
   const [, rerender] = useState(0); // history lives in a ref; this re-renders when it changes
   const [saveState, setSaveState] = useState("saved"); // saved | pending | saving | error
   const stateRef = useRef(state);
-  const dirty = useRef({ segments: false, cues: false });
+  const dirty = useRef({ segments: false, cues: false, overlays: false });
   const timer = useRef(null);
   const saveRef = useRef(null);
 
@@ -50,7 +50,8 @@ export default function useVideoEdit({ video, sourceDuration, loadedCues, onSave
     const { segments, cues } = stateRef.current;
     if (dirty.current.segments && segments) body.segments = segments.map((s) => [s.start, s.end]);
     if (dirty.current.cues) body.cues = cues.map(({ start, end, text }) => ({ start, end, text }));
-    dirty.current = { segments: false, cues: false };
+    if (dirty.current.overlays) body.overlays = stateRef.current.overlays;
+    dirty.current = { segments: false, cues: false, overlays: false };
     if (!Object.keys(body).length) return;
     setSaveState("saving");
     try {
@@ -71,6 +72,7 @@ export default function useVideoEdit({ video, sourceDuration, loadedCues, onSave
     setState(next);
     if (next.segments !== prev.segments) dirty.current.segments = true;
     if (next.cues !== prev.cues) dirty.current.cues = true;
+    if (next.overlays !== prev.overlays) dirty.current.overlays = true;
     setSaveState("pending");
     clearTimeout(timer.current);
     timer.current = setTimeout(() => saveRef.current(), SAVE_DELAY);
@@ -144,10 +146,10 @@ export default function useVideoEdit({ video, sourceDuration, loadedCues, onSave
   const reset = useCallback(async () => {
     clearTimeout(timer.current);
     timer.current = null;
-    dirty.current = { segments: false, cues: false };
+    dirty.current = { segments: false, cues: false, overlays: false };
     try {
       const updated = await videosApi.resetEdit(video.id);
-      stateRef.current = { ...stateRef.current, segments: [newSegment(0, sourceDuration)] };
+      stateRef.current = { ...stateRef.current, segments: [newSegment(0, sourceDuration)], overlays: [] };
       setState(stateRef.current);
       history.current = { past: [], future: [] };
       setSaveState("saved");
@@ -160,6 +162,7 @@ export default function useVideoEdit({ video, sourceDuration, loadedCues, onSave
   return {
     segments: state.segments,
     cues: state.cues,
+    overlays: state.overlays,
     apply,
     preview,
     checkpoint,

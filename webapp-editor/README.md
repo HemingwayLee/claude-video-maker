@@ -18,6 +18,17 @@ A web UI for talking to Claude Code, built on the same stack as `info-center`:
   language, Claude Code can write them: it transcribes the audio with Whisper (`backend/scripts/transcribe.py`,
   model `WHISPER_MODEL`), then corrects, translates and times the cues. Imported files go to
   `workspace/videos/<uuid>/` (`video.mp4`, `subtitles.srt`), where Claude Code can use them.
+  The editor's right-hand panel has two tabs: **Subtitle** (the subtitle list and editor) and **Material** (animations
+  generated from this video, plus video/audio files uploaded from disk, previewed in place; stored in the video's
+  `materials/` folder, `app/materials.py`). Drag Material onto the timeline and it gets its own track (video tracks
+  above the main video, audio below the main audio), CapCut-style: move clips, trim their edges, split at the
+  playhead, delete, mute a track, undo/redo; clips snap to the playhead and other clip edges. The player plays the
+  tracks in sync (video tracks cover the main picture). Tracks are saved in `videos.overlays` with the rest of the
+  edit (`src/video/overlays.js`, `components/video/OverlayTrack.jsx`).
+  The right panel's **Export** tab renders the edited timeline with ffmpeg (`backend/app/exports.py`, one render
+  at a time): an MP4 with sound (kept parts joined, extra tracks overlaid and mixed, subtitles optionally burnt
+  in), or the audio alone (MP3/M4A/WAV). Renders go to a temporary folder in the backend container (never the
+  workspace); the browser downloads the file as soon as it's done and the server deletes it right after. Subtitles download as SRT or WebVTT, timed to the edited video or to the original.
   The third tab, **Animation making options**, holds the options Claude Code uses to make animations (style,
   colours, on-screen text, frame, resolution, fps, length, sound, reference stills, extra instructions, model,
   effort, cost and turn limits). In Video Editing, select subtitles, right-click and choose **Generate animation**:

@@ -80,6 +80,10 @@ class Video(Base):
     # Timeline edit: the parts of the source video that are kept, in order, as [[start_s, end_s], ...].
     # None means the whole video. Non-destructive: video.<ext> itself is never changed.
     segments: Mapped[list[list[float]] | None] = mapped_column(JSON)
+    # Extra tracks dropped from Material (animations, uploaded video/audio), in timeline time:
+    # [{"id", "kind": "video" | "audio", "muted", "clips": [{"id", "source": {"type", "id"}, "name",
+    #   "start", "in", "duration", "source_duration", "muted"}]}]
+    overlays: Mapped[list[dict[str, Any]] | None] = mapped_column(JSON)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
@@ -123,3 +127,26 @@ class Animation(Base):
     claude_session_id: Mapped[str | None] = mapped_column(String(100))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class Material(Base):
+    """A video or audio file uploaded for a video's project (the editor's Material tab).
+
+    Stored in that video's folder, `<videos_dir>/<video uuid>/materials/<uuid><ext>`, and deleted with it.
+    """
+
+    __tablename__ = "materials"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    uuid: Mapped[UUID] = mapped_column(
+        Uuid, unique=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    video_id: Mapped[int] = mapped_column(ForeignKey("videos.id", ondelete="CASCADE"), index=True)
+    name: Mapped[str] = mapped_column(String(300))
+    kind: Mapped[str] = mapped_column(String(10))  # video | audio
+    file: Mapped[str] = mapped_column(String(100))
+    size_bytes: Mapped[int | None] = mapped_column(BigInteger)
+    duration_s: Mapped[float | None]
+    width: Mapped[int | None]
+    height: Mapped[int | None]
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

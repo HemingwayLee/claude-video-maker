@@ -371,6 +371,15 @@ def save_edit(video_id: int, payload: schemas.VideoEdit, db: Session = Depends(g
             segments = [[round(s, 3), round(e, 3)] for s, e in segments]
         video.segments = segments
 
+    if "overlays" in data:
+        tracks = payload.overlays or []
+        for track in tracks:
+            clips = sorted(track.clips, key=lambda c: c.start)
+            for a, b in zip(clips, clips[1:]):
+                if b.start < a.start + a.duration - 1e-3:
+                    raise HTTPException(400, "Clips on the same track can't overlap")
+        video.overlays = [t.model_dump(by_alias=True) for t in tracks] or None
+
     if "cues" in data:
         if payload.cues is None:
             raise HTTPException(400, "cues can't be null; delete the subtitles instead")
@@ -395,13 +404,14 @@ def save_edit(video_id: int, payload: schemas.VideoEdit, db: Session = Depends(g
 
 @router.delete("/{video_id}/edit", response_model=schemas.VideoRead)
 def reset_edit(video_id: int, db: Session = Depends(get_db)):
-    """Undo all editing: the whole video again, and the subtitles as they were before the first edit."""
+    """Undo all editing: the whole video again, no extra tracks, and the subtitles as before the first edit."""
     video = _get(db, video_id)
     folder = _video_dir(video)
     original = folder / ORIGINAL_SUBTITLE_FILE
     if original.exists():
         original.replace(folder / SUBTITLE_FILE)
     video.segments = None
+    video.overlays = None
     db.commit()
     db.refresh(video)
     return _read(video)

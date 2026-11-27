@@ -168,6 +168,17 @@ export const videosApi = {
   vttUrl: (id) => `/api/videos/${id}/subtitles.vtt`,
 };
 
+/** The editor's Export tab: render the edited timeline to MP4 or audio, and subtitle downloads. */
+export const exportsApi = {
+  status: (videoId) => request(`/videos/${videoId}/exports`),
+  // {kind: "video" | "audio", include_tracks, burn_subtitles, audio_format: "mp3" | "m4a" | "wav"}
+  start: (videoId, body) => request(`/videos/${videoId}/exports`, { method: "POST", body: JSON.stringify(body) }),
+  cancel: (videoId, kind) => request(`/videos/${videoId}/exports/${kind}/cancel`, { method: "POST" }),
+  // The server deletes the render once it has been downloaded.
+  fileUrl: (videoId, kind, version) => `/api/videos/${videoId}/exports/${kind}/file?v=${version ?? ""}`,
+  subtitlesUrl: (videoId, timing, format) => `/api/videos/${videoId}/export/subtitles?timing=${timing}&format=${format}`,
+};
+
 /** Animations Claude Code makes from selected subtitles, and the options it uses. */
 export const animationsApi = {
   getOptions: () => request("/animation-options"),
@@ -180,4 +191,17 @@ export const animationsApi = {
   remove: (id) => request(`/animations/${id}`, { method: "DELETE" }),
   videoUrl: (id, download = false) => `/api/animations/${id}/video${download ? "?download=true" : ""}`,
   thumbnailUrl: (id) => `/api/animations/${id}/thumbnail`,
+};
+
+/** A video's material: video/audio files uploaded from disk (generated animations come from animationsApi). */
+export const materialsApi = {
+  list: (videoId) => request(`/videos/${videoId}/materials`),
+  upload: (videoId, file, options) => {
+    const form = new FormData();
+    form.append("file", file);
+    return sendForm("POST", `/videos/${videoId}/materials`, form, options);
+  },
+  remove: (id) => request(`/materials/${id}`, { method: "DELETE" }),
+  fileUrl: (id, download = false) => `/api/materials/${id}/file${download ? "?download=true" : ""}`,
+  thumbnailUrl: (id) => `/api/materials/${id}/thumbnail`,
 };

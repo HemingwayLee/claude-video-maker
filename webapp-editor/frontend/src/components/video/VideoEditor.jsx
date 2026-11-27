@@ -15,6 +15,8 @@ import {
   Menu,
   MenuItem,
   Snackbar,
+  Tab,
+  Tabs,
   Stack,
   TextField,
   Tooltip,
@@ -25,7 +27,6 @@ import ClosedCaptionIcon from "@mui/icons-material/ClosedCaption";
 import ClosedCaptionDisabledOutlinedIcon from "@mui/icons-material/ClosedCaptionDisabledOutlined";
 import ContentCutIcon from "@mui/icons-material/ContentCut";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
-import DownloadOutlinedIcon from "@mui/icons-material/DownloadOutlined";
 import Forward5Icon from "@mui/icons-material/Forward5";
 import PauseIcon from "@mui/icons-material/Pause";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
@@ -43,7 +44,20 @@ import { cueSpan, formatPrecise, layout, parseTimecode, splitAt, splitCueText, t
 import { SUBTITLE_SOURCE, formatTimecode } from "../../video/format";
 import { cueAt, parseSrt } from "../../video/srt";
 import useVideoEdit, { newCueId } from "../../video/useVideoEdit";
+import {
+  clipEnd,
+  dragClip,
+  dropMaterial,
+  findClip,
+  mediaUrl,
+  removeClips,
+  snapPoints,
+  splitClip,
+  updateClip,
+} from "../../video/overlays";
 import GenerateAnimationDialog from "./GenerateAnimationDialog";
+import ExportPanel from "./ExportPanel";
+import MaterialPanel from "./MaterialPanel";
 import Timeline from "./Timeline";
 
 const CUE_LIST_W = 340;
@@ -52,6 +66,48 @@ const MOD = isMac ? "⌘" : "Ctrl+";
 
 const isTyping = (el) =>
   el?.closest?.("input, textarea, select, [contenteditable='true'], [role='slider'], [role='dialog']");
+
+/**
+ * One clip of an extra track in the player: shown (video) or heard (audio) while the playhead is inside it,
+ * kept in step with the timeline. Video clips cover the main picture; later tracks draw on top.
+ */
+function OverlayMedia({ clip, kind, muted, time, playing }) {
+  const ref = useRef(null);
+  const active = time >= clip.start && time < clipEnd(clip);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (!active) {
+      if (!el.paused) el.pause();
+      return;
+    }
+    const want = clip.in + (time - clip.start);
+    // While playing, only correct real drift (seeking every frame would stutter).
+    if (Math.abs(el.currentTime - want) > (playing ? 0.3 : 0.04)) el.currentTime = want;
+    if (playing && el.paused) el.play().catch(() => {});
+    if (!playing && !el.paused) el.pause();
+  });
+  if (kind === "audio") return <audio ref={ref} src={mediaUrl(clip.source)} muted={muted} preload="auto" />;
+  return (
+    <video
+      ref={ref}
+      src={mediaUrl(clip.source)}
+      muted={muted}
+      preload="auto"
+      playsInline
+      style={{
+        position: "absolute",
+        inset: 0,
+        width: "100%",
+        height: "100%",
+        objectFit: "contain",
+        background: "black",
+        visibility: active ? "visible" : "hidden",
+        pointerEvents: "none",
+      }}
+    />
+  );
+}
 
 /** A timecode field that commits on Enter or blur (Esc reverts). */
 function TimeField({ label, value, onCommit, disabled }) {
@@ -217,6 +273,7 @@ export default function VideoEditor({ video, onChanged, onSaved, onError }) {
   // {kind: "clip" | "cue", ids: [...], anchor}: one clip, or one or more subtitles (⌘/Ctrl/Shift + click).
   const [selection, setSelection] = useState(null);
   const [menu, setMenu] = useState(null); // right-click menu position {x, y}
+  const [panel, setPanel] = useState("subtitle"); // right-hand panel tab: subtitle | material | export
   const [generateOpen, setGenerateOpen] = useState(false);
   const [notice, setNotice] = useState(null); // {text, animationId}
   const navigate = useNavigate();
@@ -363,11 +420,22 @@ export default function VideoEditor({ video, onChanged, onSaved, onError }) {
 
   const split = useCallback(() => {
     if (!editable) return;
+    // A selected clip on an extra track under the playhead is split; otherwise the main video.
+    if (selection?.kind === "overlay") {
+      const found = findClip(ed.overlays, selection.ids[0]);
+      if (found && currentTime > found.clip.start && currentTime < clipEnd(found.clip)) {
+        ed.apply((s) => {
+          const overlays = splitClip(s.overlays, selection.ids[0], currentTime);
+          return overlays === s.overlays ? s : { ...s, overlays };
+        });
+        return;
+      }
+    }
     ed.apply((s) => {
       const segments = splitAt(s.segments, clips, currentTime);
       return segments === s.segments ? s : { ...s, segments };
     });
-  }, [ed, clips, currentTime, editable]);
+  }, [ed, clips, currentTime, editable, selection]);
 
   const deleteSelection = useCallback(() => {
     if (!editable || !selection) return;
@@ -380,6 +448,9 @@ export default function VideoEditor({ video, onChanged, onSaved, onError }) {
       setSelection(null);
       const next = layout(segments).clips;
       seek(Math.min(clip.outStart, next[next.length - 1].outEnd - 0.01), next);
+    } else if (selection.kind === "overlay") {
+      ed.apply((s) => ({ ...s, overlays: removeClips(s.overlays, selection.ids) }));
+      setSelection(null);
     } else {
       const doomed = new Set(selection.ids);
       ed.apply((s) => ({ ...s, cues: s.cues.filter((c) => !doomed.has(c.id)) }));
@@ -457,6 +528,48 @@ export default function VideoEditor({ video, onChanged, onSaved, onError }) {
     const block = cueBlocks.find((c) => c.id === id);
     if (block) seekFromTimeline(block.outStart);
   };
+
+  // --- extra tracks (Material dropped on the timeline) ---
+
+  const overlayDrag = useRef(null); // the clip and its track when a move/trim began
+  const timelinePps = useRef(100); // the timeline's pixels per second, for snapping distance
+
+  const dropOnTimeline = (item, t) => {
+    if (!editable) return;
+    let added = null;
+    ed.apply((s) => {
+      const result = dropMaterial(s.overlays, item, t, duration);
+      added = result.clip;
+      return { ...s, overlays: result.overlays };
+    });
+    if (added) setSelection({ kind: "overlay", ids: [added.id], anchor: added.id });
+  };
+
+  const editOverlay = (clipId, mode, phase, value) => {
+    if (!editable) return;
+    if (phase === "begin") {
+      const found = findClip(ed.overlays, clipId);
+      if (!found) return;
+      videoRef.current?.pause();
+      overlayDrag.current = { ...found, playhead: currentTime };
+      ed.checkpoint();
+      return;
+    }
+    if (phase !== "move" || !overlayDrag.current) {
+      if (phase === "end") overlayDrag.current = null;
+      return;
+    }
+    const { track, clip, playhead } = overlayDrag.current;
+    // Snap to where the playhead was when the drag began (trimming moves the playhead along with the edge).
+    const points = snapPoints(ed.overlays, clips, playhead, clipId);
+    const threshold = 8 / Math.max(timelinePps.current, 1e-6); // 8 px
+    const next = dragClip(track, clip, mode, value, duration, points, threshold);
+    ed.preview((s) => ({ ...s, overlays: updateClip(s.overlays, clipId, () => next) }));
+    if (mode !== "move") seek(mode === "start" ? next.start : clipEnd(next)); // show the frame at the edge
+  };
+
+  const toggleTrackMute = (trackId) =>
+    ed.apply((s) => ({ ...s, overlays: s.overlays.map((t) => (t.id === trackId ? { ...t, muted: !t.muted } : t)) }));
 
   /** Right-click on a subtitle: keep a selection that includes it, otherwise select just it; then the menu. */
   const openCueMenu = (id, e) => {
@@ -557,10 +670,12 @@ export default function VideoEditor({ video, onChanged, onSaved, onError }) {
     ? null
     : selection.kind === "clip"
       ? "video part"
+      : selection.kind === "overlay"
+        ? "clip"
       : selection.ids.length > 1
         ? `${selection.ids.length} subtitles`
         : "subtitle";
-  const edited = clips.length > 1 || video.subtitles_edited || (ed.segments?.[0] && (ed.segments[0].start > 0.01 || ed.segments[0].end < sourceDuration - 0.01));
+  const edited = clips.length > 1 || ed.overlays.length > 0 || video.subtitles_edited || (ed.segments?.[0] && (ed.segments[0].start > 0.01 || ed.segments[0].end < sourceDuration - 0.01));
 
   const toolbar = (
     <>
@@ -641,6 +756,18 @@ export default function VideoEditor({ video, onChanged, onSaved, onError }) {
             onTimeUpdate={(e) => !playing && setCurrentTime(toOutput(clipsRef.current, e.currentTarget.currentTime))}
             style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
           />
+          {ed.overlays.map((track) =>
+            track.clips.map((c) => (
+              <OverlayMedia
+                key={c.id}
+                clip={c}
+                kind={track.kind}
+                muted={muted || track.muted}
+                time={currentTime}
+                playing={playing}
+              />
+            ))
+          )}
           {showCC && activeCue && (
             <Box
               sx={{
@@ -676,6 +803,27 @@ export default function VideoEditor({ video, onChanged, onSaved, onError }) {
             minHeight: 0,
           }}
         >
+          <Tabs
+            value={panel}
+            onChange={(_, v) => setPanel(v)}
+            variant="fullWidth"
+            sx={{ minHeight: 40, borderBottom: 1, borderColor: "divider", "& .MuiTab-root": { minHeight: 40, py: 0 } }}
+          >
+            <Tab value="subtitle" label="Subtitle" />
+            <Tab value="material" label="Material" />
+            <Tab value="export" label="Export" />
+          </Tabs>
+          {panel === "material" ? (
+            <MaterialPanel video={video} onError={onError} />
+          ) : panel === "export" ? (
+            <ExportPanel
+              video={video}
+              hasTracks={ed.overlays.length > 0}
+              flush={ed.flush}
+              onError={onError}
+            />
+          ) : (
+          <>
           <Stack direction="row" sx={{ alignItems: "center", px: 1.5, py: 1, gap: 1 }}>
             <Box sx={{ flex: 1, minWidth: 0 }}>
               <Typography variant="subtitle2">Subtitles</Typography>
@@ -695,13 +843,6 @@ export default function VideoEditor({ video, onChanged, onSaved, onError }) {
                 </Button>
               </span>
             </Tooltip>
-            {video.has_subtitles && (
-              <Tooltip title="Download .srt (source timing)">
-                <IconButton size="small" component="a" href={videosApi.srtUrl(video.id)}>
-                  <DownloadOutlinedIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
-            )}
           </Stack>
           <Divider />
           {selectedCueIds.length > 1 && (
@@ -739,6 +880,8 @@ export default function VideoEditor({ video, onChanged, onSaved, onError }) {
               />
             )}
           />
+          </>
+          )}
         </Stack>
       </Box>
 
@@ -807,6 +950,12 @@ export default function VideoEditor({ video, onChanged, onSaved, onError }) {
         onSelect={setSelection}
         onCuePick={pickCue}
         onCueContextMenu={openCueMenu}
+        overlays={ed.overlays}
+        onOverlaySelect={(id) => setSelection({ kind: "overlay", ids: [id], anchor: id })}
+        onOverlayEdit={editOverlay}
+        onTrackMute={toggleTrackMute}
+        onDropMaterial={editable ? dropOnTimeline : null}
+        onPps={(p) => (timelinePps.current = p)}
         onSeek={seekFromTimeline}
         onCueEdge={editable ? onCueEdge : null}
         title={video.title}

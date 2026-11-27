@@ -3,6 +3,8 @@ import { Box, IconButton, Slider, Stack, Tooltip, Typography } from "@mui/materi
 import ZoomInIcon from "@mui/icons-material/ZoomIn";
 import ZoomOutIcon from "@mui/icons-material/ZoomOut";
 import { formatDuration } from "../../video/format";
+import { materialDrag } from "../../video/overlays";
+import { OverlayTrackLabel, OverlayTrackRow } from "./OverlayTrack";
 import Waveform from "./Waveform";
 
 const LABEL_W = 64;
@@ -94,12 +96,19 @@ export default function Timeline({
   toolbar,
   waveform, // {peaks: Uint8Array, rate} once loaded
   audioPlaceholder, // shown in the Audio track when there's no waveform
+  overlays = [], // extra tracks from Material: video ones above the Video row, audio ones below Audio
+  onOverlaySelect, // (clipId)
+  onOverlayEdit, // (clipId, mode, phase, value): see OverlayTrackRow
+  onTrackMute, // (trackId)
+  onDropMaterial, // (item, time): a Material item dropped on the timeline
+  onPps, // (pixelsPerSecond): tells the editor the current zoom
 }) {
   const scrollRef = useRef(null);
   const [viewW, setViewW] = useState(0);
   const [zoom, setZoom] = useState(1);
   const dragging = useRef(false);
   const zoomAnchor = useRef(null); // keep the time under the pointer in place while zooming
+  const [drop, setDrop] = useState(null); // {t, duration} while Material is dragged over the timeline
 
   useLayoutEffect(() => {
     const el = scrollRef.current;
@@ -113,12 +122,19 @@ export default function Timeline({
   const total = duration > 0 ? duration : 1;
   const pps = ((viewW || 1) / total) * zoom; // pixels per second
   const contentW = Math.max(viewW, total * pps);
+  useEffect(() => {
+    onPps?.(pps);
+  }, [pps, onPps]);
   const step = STEPS.find((s) => s * pps >= 70) ?? STEPS[STEPS.length - 1];
 
-  // Keep the playhead in view (unless the user is dragging).
+  // Keep the playhead in view when it moves (not when zooming, which keeps the pointer's spot in place,
+  // and not while the user drags on the timeline).
+  const lastTime = useRef(currentTime);
   useEffect(() => {
     const el = scrollRef.current;
-    if (!el || dragging.current) return;
+    const moved = currentTime !== lastTime.current;
+    lastTime.current = currentTime;
+    if (!el || dragging.current || !moved) return;
     const x = currentTime * pps;
     if (x < el.scrollLeft || x > el.scrollLeft + el.clientWidth - 24) el.scrollLeft = Math.max(0, x - el.clientWidth * 0.2);
   }, [currentTime, pps]);
@@ -165,6 +181,24 @@ export default function Timeline({
   for (let t = 0; t <= total + 1e-6; t += step) ticks.push(t);
 
   const isSelected = (kind, id) => selection?.kind === kind && selection.ids.includes(id);
+  const overlayIds = selection?.kind === "overlay" ? selection.ids : [];
+  // Video tracks stack upwards from the main Video row (the top row is drawn on top); audio tracks go down.
+  const videoTracks = overlays.filter((t) => t.kind === "video");
+  const audioTracks = overlays.filter((t) => t.kind === "audio");
+  const trackName = (t) =>
+    t.kind === "video" ? `V${videoTracks.indexOf(t) + 2}` : `A${audioTracks.indexOf(t) + 2}`;
+  const overlayRow = (t) => (
+    <OverlayTrackRow
+      key={t.id}
+      track={t}
+      pps={pps}
+      timeAt={(x) => timeAt(x)}
+      selectedIds={overlayIds}
+      onSelect={onOverlaySelect}
+      onEdit={onOverlayEdit}
+    />
+  );
+  const overlayLabel = (t) => <OverlayTrackLabel key={t.id} track={t} name={trackName(t)} onToggleMute={() => onTrackMute(t.id)} />;
   const hasModifier = (e) => e.metaKey || e.ctrlKey || e.shiftKey;
 
   return (
@@ -202,8 +236,10 @@ export default function Timeline({
       <Box sx={{ display: "flex", borderTop: 1, borderColor: "divider" }}>
         <Box sx={{ width: LABEL_W, flexShrink: 0, borderRight: 1, borderColor: "divider" }}>
           <TrackLabel height={RULER_H} />
-          <TrackLabel height={VIDEO_H}>Video</TrackLabel>
-          <TrackLabel height={AUDIO_H}>Audio</TrackLabel>
+          {[...videoTracks].reverse().map(overlayLabel)}
+          <TrackLabel height={VIDEO_H}>{overlays.length ? "V1" : "Video"}</TrackLabel>
+          <TrackLabel height={AUDIO_H}>{overlays.length ? "A1" : "Audio"}</TrackLabel>
+          {audioTracks.map(overlayLabel)}
           <TrackLabel height={CC_H}>CC</TrackLabel>
         </Box>
 
@@ -220,6 +256,22 @@ export default function Timeline({
           onPointerMove={(e) => dragging.current && onSeek(timeAt(e.clientX))}
           onPointerUp={() => (dragging.current = false)}
           onPointerCancel={() => (dragging.current = false)}
+          onDragOver={(e) => {
+            const item = materialDrag.current;
+            if (!item || !onDropMaterial) return;
+            e.preventDefault();
+            e.dataTransfer.dropEffect = "copy";
+            const t = timeAt(e.clientX);
+            setDrop((d) => (d && Math.abs(d.t - t) < 1e-3 ? d : { t, duration: Math.min(item.duration || 5, duration), kind: item.kind }));
+          }}
+          onDragLeave={(e) => !e.currentTarget.contains(e.relatedTarget) && setDrop(null)}
+          onDrop={(e) => {
+            const item = materialDrag.current;
+            setDrop(null);
+            if (!item || !onDropMaterial) return;
+            e.preventDefault();
+            onDropMaterial(item, timeAt(e.clientX));
+          }}
         >
           <Box sx={{ position: "relative", width: contentW }}>
             {/* Ruler */}
@@ -239,6 +291,9 @@ export default function Timeline({
                 </Box>
               ))}
             </Box>
+
+            {/* Extra video tracks, topmost first */}
+            {[...videoTracks].reverse().map(overlayRow)}
 
             {/* Video track: one block per kept clip */}
             <Box sx={{ position: "relative", height: VIDEO_H, borderBottom: 1, borderColor: "divider" }}>
@@ -297,6 +352,9 @@ export default function Timeline({
                 )
               )}
             </Box>
+
+            {/* Extra audio tracks */}
+            {audioTracks.map(overlayRow)}
 
             {/* CC track */}
             <Box sx={{ position: "relative", height: CC_H, borderBottom: 1, borderColor: "divider" }}>
@@ -375,6 +433,33 @@ export default function Timeline({
                 );
               })}
             </Box>
+
+            {/* Where dropped Material would go */}
+            {drop && (
+              <Box
+                sx={{
+                  position: "absolute",
+                  top: RULER_H,
+                  bottom: 0,
+                  left: Math.min(drop.t, Math.max(0, duration - drop.duration)) * pps,
+                  width: Math.max(drop.duration * pps, 4),
+                  border: 2,
+                  borderStyle: "dashed",
+                  borderColor: "primary.main",
+                  borderRadius: 1,
+                  bgcolor: "rgba(var(--mui-palette-primary-mainChannel) / 0.12)",
+                  pointerEvents: "none",
+                  zIndex: 3,
+                  display: "flex",
+                  alignItems: "flex-start",
+                  p: 0.5,
+                }}
+              >
+                <Typography sx={{ fontSize: 11, fontWeight: 600, color: "primary.main", whiteSpace: "nowrap" }}>
+                  + new {drop.kind} track
+                </Typography>
+              </Box>
+            )}
 
             {/* Playhead */}
             <Box
