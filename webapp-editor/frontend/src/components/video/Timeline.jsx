@@ -3,8 +3,9 @@ import { Box, IconButton, Slider, Stack, Tooltip, Typography } from "@mui/materi
 import ZoomInIcon from "@mui/icons-material/ZoomIn";
 import ZoomOutIcon from "@mui/icons-material/ZoomOut";
 import { formatDuration } from "../../video/format";
-import { materialDrag } from "../../video/overlays";
-import { OverlayTrackLabel, OverlayTrackRow } from "./OverlayTrack";
+import { isInsert } from "../../video/edit";
+import { materialDrag, placeOnTrack } from "../../video/overlays";
+import { OverlayTrackLabel, OverlayTrackRow, thumbnailOf } from "./OverlayTrack";
 import Waveform from "./Waveform";
 
 const LABEL_W = 64;
@@ -17,7 +18,9 @@ const MAX_ZOOM = 60;
 // Ruler label spacing, in seconds: the smallest that leaves room for a label.
 const STEPS = [0.5, 1, 2, 5, 10, 15, 30, 60, 120, 300, 600, 900, 1800];
 
-const tint = (alpha) => `rgba(var(--mui-palette-primary-mainChannel) / ${alpha})`;
+// Main-track clips: the source video in the primary colour, inserted Material like the extra video tracks.
+const tint = (alpha, insert = false) =>
+  `rgba(var(--mui-palette-${insert ? "secondary" : "primary"}-mainChannel) / ${alpha})`;
 
 function TrackLabel({ height, children }) {
   return (
@@ -100,7 +103,7 @@ export default function Timeline({
   onOverlaySelect, // (clipId)
   onOverlayEdit, // (clipId, mode, phase, value): see OverlayTrackRow
   onTrackMute, // (trackId)
-  onDropMaterial, // (item, time): a Material item dropped on the timeline
+  onDropMaterial, // (item, time, target): a Material item dropped on the timeline; target from dropTarget()
   onPps, // (pixelsPerSecond): tells the editor the current zoom
 }) {
   const scrollRef = useRef(null);
@@ -108,7 +111,8 @@ export default function Timeline({
   const [zoom, setZoom] = useState(1);
   const dragging = useRef(false);
   const zoomAnchor = useRef(null); // keep the time under the pointer in place while zooming
-  const [drop, setDrop] = useState(null); // {t, duration} while Material is dragged over the timeline
+  // While Material is dragged over the timeline: {target, kind, top, height} for the drop preview.
+  const [drop, setDrop] = useState(null);
 
   useLayoutEffect(() => {
     const el = scrollRef.current;
@@ -175,6 +179,32 @@ export default function Timeline({
     const el = scrollRef.current;
     const t = (clientX - el.getBoundingClientRect().left + el.scrollLeft) / pps;
     return Math.min(Math.max(t, 0), duration || 0);
+  };
+
+  /**
+   * Where a dragged Material item would land, CapCut-style: on the main Video row a video is inserted at the
+   * nearest clip edge; on an extra track of its kind it joins that track if there is room; anywhere else (or
+   * without room) it gets a new track.
+   */
+  const dropTarget = (item, e) => {
+    const t = timeAt(e.clientX);
+    const row = e.target.closest?.("[data-drop-row]");
+    const rowBox = row && { top: row.offsetTop, height: row.offsetHeight };
+    const length = Math.min(item.duration || 5, duration);
+    if (row?.dataset.dropRow === "main" && item.kind === "video") {
+      let at = 0;
+      if (clips.length) {
+        const c = clips.find((x) => t < x.outEnd) ?? clips[clips.length - 1];
+        at = t < (c.outStart + c.outEnd) / 2 ? c.outStart : c.outEnd;
+      }
+      return { target: { mode: "main" }, kind: item.kind, at, length: item.duration || 5, ...rowBox };
+    }
+    const track = row && overlays.find((x) => String(x.id) === row.dataset.dropRow);
+    if (track && track.kind === item.kind) {
+      const place = placeOnTrack(track, item, t, duration);
+      if (place) return { target: { mode: "track", trackId: track.id, place }, kind: item.kind, ...place, ...rowBox };
+    }
+    return { target: { mode: "new" }, kind: item.kind, start: Math.min(t, Math.max(0, duration - length)), duration: length };
   };
 
   const ticks = [];
@@ -261,8 +291,8 @@ export default function Timeline({
             if (!item || !onDropMaterial) return;
             e.preventDefault();
             e.dataTransfer.dropEffect = "copy";
-            const t = timeAt(e.clientX);
-            setDrop((d) => (d && Math.abs(d.t - t) < 1e-3 ? d : { t, duration: Math.min(item.duration || 5, duration), kind: item.kind }));
+            const next = dropTarget(item, e);
+            setDrop((d) => (d && JSON.stringify(d) === JSON.stringify(next) ? d : next));
           }}
           onDragLeave={(e) => !e.currentTarget.contains(e.relatedTarget) && setDrop(null)}
           onDrop={(e) => {
@@ -270,7 +300,7 @@ export default function Timeline({
             setDrop(null);
             if (!item || !onDropMaterial) return;
             e.preventDefault();
-            onDropMaterial(item, timeAt(e.clientX));
+            onDropMaterial(item, timeAt(e.clientX), dropTarget(item, e).target);
           }}
         >
           <Box sx={{ position: "relative", width: contentW }}>
@@ -295,8 +325,8 @@ export default function Timeline({
             {/* Extra video tracks, topmost first */}
             {[...videoTracks].reverse().map(overlayRow)}
 
-            {/* Video track: one block per kept clip */}
-            <Box sx={{ position: "relative", height: VIDEO_H, borderBottom: 1, borderColor: "divider" }}>
+            {/* Video track: one block per kept clip (and per Material inserted between them) */}
+            <Box data-drop-row="main" sx={{ position: "relative", height: VIDEO_H, borderBottom: 1, borderColor: "divider" }}>
               {clips.map((c, i) => {
                 const selected = isSelected("clip", c.id);
                 return (
@@ -311,18 +341,30 @@ export default function Timeline({
                       top: 4,
                       bottom: 4,
                       borderRadius: 1,
-                      bgcolor: selected ? tint(0.4) : tint(0.18),
+                      bgcolor: selected ? tint(0.4, isInsert(c)) : tint(0.18, isInsert(c)),
                       border: selected ? 2 : 1,
-                      borderColor: selected ? "text.primary" : tint(0.5),
+                      borderColor: selected ? "text.primary" : tint(0.5, isInsert(c)),
                       px: 1,
+                      gap: 0.75,
                       display: "flex",
                       alignItems: "center",
                       overflow: "hidden",
                       cursor: "pointer",
                     }}
+                    title={isInsert(c) ? c.name : undefined}
                   >
+                    {isInsert(c) && (c.outEnd - c.outStart) * pps > 70 && (
+                      <Box
+                        component="img"
+                        src={thumbnailOf(c.source)}
+                        alt=""
+                        draggable={false}
+                        onError={(e) => (e.currentTarget.style.display = "none")}
+                        sx={{ height: "100%", maxHeight: 36, borderRadius: 0.5, flexShrink: 0, pointerEvents: "none" }}
+                      />
+                    )}
                     <Typography noWrap sx={{ fontSize: 12 }}>
-                      {clips.length > 1 ? `${i + 1}. ${title}` : title}
+                      {clips.length > 1 ? `${i + 1}. ${isInsert(c) ? c.name : title}` : title}
                     </Typography>
                   </Box>
                 );
@@ -435,13 +477,45 @@ export default function Timeline({
             </Box>
 
             {/* Where dropped Material would go */}
-            {drop && (
+            {drop?.target.mode === "main" && (
               <Box
                 sx={{
                   position: "absolute",
-                  top: RULER_H,
-                  bottom: 0,
-                  left: Math.min(drop.t, Math.max(0, duration - drop.duration)) * pps,
+                  top: drop.top,
+                  height: drop.height,
+                  left: drop.at * pps - 2,
+                  width: 4,
+                  bgcolor: "primary.main",
+                  borderRadius: 1,
+                  pointerEvents: "none",
+                  zIndex: 3,
+                }}
+              >
+                <Typography
+                  sx={{
+                    position: "absolute",
+                    left: 8,
+                    top: 2,
+                    px: 0.5,
+                    borderRadius: 0.5,
+                    fontSize: 11,
+                    fontWeight: 600,
+                    color: "primary.contrastText",
+                    bgcolor: "primary.main",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  Insert here (+{formatDuration(drop.length)})
+                </Typography>
+              </Box>
+            )}
+            {drop && drop.target.mode !== "main" && (
+              <Box
+                sx={{
+                  position: "absolute",
+                  top: drop.target.mode === "track" ? drop.top : RULER_H,
+                  ...(drop.target.mode === "track" ? { height: drop.height } : { bottom: 0 }),
+                  left: drop.start * pps,
                   width: Math.max(drop.duration * pps, 4),
                   border: 2,
                   borderStyle: "dashed",
@@ -456,7 +530,7 @@ export default function Timeline({
                 }}
               >
                 <Typography sx={{ fontSize: 11, fontWeight: 600, color: "primary.main", whiteSpace: "nowrap" }}>
-                  + new {drop.kind} track
+                  {drop.target.mode === "track" ? "+ add to this track" : `+ new ${drop.kind} track`}
                 </Typography>
               </Box>
             )}

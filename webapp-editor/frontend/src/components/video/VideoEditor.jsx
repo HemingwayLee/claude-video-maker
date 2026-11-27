@@ -40,11 +40,25 @@ import UploadFileOutlinedIcon from "@mui/icons-material/UploadFileOutlined";
 import VolumeOffIcon from "@mui/icons-material/VolumeOff";
 import VolumeUpIcon from "@mui/icons-material/VolumeUp";
 import { videosApi } from "../../api";
-import { cueSpan, formatPrecise, layout, parseTimecode, splitAt, splitCueText, toOutput, toSource } from "../../video/edit";
+import {
+  clipIndexAt,
+  cueSpan,
+  formatPrecise,
+  insertAt,
+  isInsert,
+  layout,
+  mediaTime,
+  parseTimecode,
+  splitAt,
+  splitCueText,
+  toOutput,
+  toSource,
+} from "../../video/edit";
 import { SUBTITLE_SOURCE, formatTimecode } from "../../video/format";
 import { cueAt, parseSrt } from "../../video/srt";
 import useVideoEdit, { newCueId } from "../../video/useVideoEdit";
 import {
+  addToTrack,
   clipEnd,
   dragClip,
   dropMaterial,
@@ -53,6 +67,7 @@ import {
   removeClips,
   snapPoints,
   splitClip,
+  uid,
   updateClip,
 } from "../../video/overlays";
 import GenerateAnimationDialog from "./GenerateAnimationDialog";
@@ -88,6 +103,47 @@ function OverlayMedia({ clip, kind, muted, time, playing }) {
     if (!playing && !el.paused) el.pause();
   });
   if (kind === "audio") return <audio ref={ref} src={mediaUrl(clip.source)} muted={muted} preload="auto" />;
+  return (
+    <video
+      ref={ref}
+      src={mediaUrl(clip.source)}
+      muted={muted}
+      preload="auto"
+      playsInline
+      style={{
+        position: "absolute",
+        inset: 0,
+        width: "100%",
+        height: "100%",
+        objectFit: "contain",
+        background: "black",
+        visibility: active ? "visible" : "hidden",
+        pointerEvents: "none",
+      }}
+    />
+  );
+}
+
+/**
+ * Material inserted on the main track. While playing, the editor's playback loop drives it (it's the clock
+ * then); while paused it shows the frame under the playhead.
+ */
+function MainInsertMedia({ clip, time, playing, muted, register }) {
+  const ref = useRef(null);
+  const active = time >= clip.outStart && time < clip.outEnd;
+  useEffect(() => {
+    register(clip.id, ref.current);
+    return () => register(clip.id, null);
+  }, [clip.id, register]);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || playing) return;
+    if (!el.paused) el.pause();
+    if (active) {
+      const want = mediaTime(clip, time);
+      if (Math.abs(el.currentTime - want) > 0.04) el.currentTime = want;
+    }
+  });
   return (
     <video
       ref={ref}
@@ -333,34 +389,72 @@ export default function VideoEditor({ video, onChanged, onSaved, onError }) {
     };
   }, [video.id, hasFile]);
 
-  // While playing: move the playhead smoothly and skip the parts that were cut out.
+  // Playback: `playing` is ours, not a media element's. The element of the clip under the playhead (the source
+  // video, or Material inserted on the main track) plays and is the clock; at a clip's end the next one starts.
+  const timeRef = useRef(0);
+  const setTime = useCallback((t) => {
+    timeRef.current = t;
+    setCurrentTime(t);
+  }, []);
+  const insertEls = useRef(new Map()); // main-track insert clip id -> its <video>
+  const registerInsert = useCallback((id, el) => {
+    if (el) insertEls.current.set(id, el);
+    else insertEls.current.delete(id);
+  }, []);
+  const elementFor = useCallback((c) => (isInsert(c) ? insertEls.current.get(c.id) : videoRef.current), []);
+
   useEffect(() => {
     if (!playing) return undefined;
     let frame;
+    let activeId = null;
+    let activeEl = null;
     const tick = () => {
-      const el = videoRef.current;
       const cl = clipsRef.current;
-      if (el && cl.length) {
-        const src = el.currentTime;
-        const inClip = cl.some((c) => src >= c.start - 0.01 && src < c.end - 0.03);
-        if (!inClip) {
-          const next = cl.find((c) => c.start > src - 0.005 && c.start >= src);
-          if (next) el.currentTime = next.start;
-          else {
-            el.pause();
-            el.currentTime = cl[cl.length - 1].end;
-          }
+      if (!cl.length) return setPlaying(false);
+      const i = clipIndexAt(cl, timeRef.current);
+      const c = cl[i];
+      const el = elementFor(c);
+      if (!el) {
+        frame = requestAnimationFrame(tick);
+        return undefined;
+      }
+      if (activeId !== c.id) {
+        // Entering a clip: start its media at the right point.
+        if (activeEl && activeEl !== el) activeEl.pause();
+        const want = mediaTime(c, timeRef.current);
+        if (Math.abs(el.currentTime - want) > 0.05) el.currentTime = want;
+        if (el.paused) el.play().catch(() => {});
+        activeId = c.id;
+        activeEl = el;
+      }
+      const m = el.currentTime;
+      if (m >= c.end - 0.03 || el.ended) {
+        if (i === cl.length - 1) {
+          el.pause();
+          setTime(c.outEnd);
+          setPlaying(false);
+          return undefined;
         }
-        setCurrentTime(toOutput(cl, el.currentTime));
+        setTime(cl[i + 1].outStart);
+      } else {
+        setTime(c.outStart + Math.min(Math.max(m - c.start, 0), c.end - c.start));
       }
       frame = requestAnimationFrame(tick);
+      return undefined;
     };
     frame = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frame);
-  }, [playing]);
+    return () => {
+      cancelAnimationFrame(frame);
+      videoRef.current?.pause();
+      insertEls.current.forEach((el) => el.pause());
+    };
+  }, [playing, elementFor, setTime]);
 
+  const clipNow = clips.length ? clips[clipIndexAt(clips, currentTime)] : null;
+  const inInsert = !!clipNow && isInsert(clipNow);
   const sourceNow = toSource(clips, currentTime);
-  const activeIndex = useMemo(() => cueAt(ed.cues, sourceNow), [ed.cues, sourceNow]);
+  const cueIndex = useMemo(() => cueAt(ed.cues, sourceNow), [ed.cues, sourceNow]);
+  const activeIndex = inInsert ? -1 : cueIndex; // no source subtitles over inserted Material
   const activeCue = activeIndex >= 0 ? ed.cues[activeIndex] : null;
   const cueBlocks = useMemo(
     () =>
@@ -377,32 +471,35 @@ export default function VideoEditor({ video, onChanged, onSaved, onError }) {
     (t, cl = clipsRef.current) => {
       const total = cl.length ? cl[cl.length - 1].outEnd : 0;
       const out = Math.min(Math.max(t, 0), total);
-      const el = videoRef.current;
-      if (el) el.currentTime = toSource(cl, out);
-      setCurrentTime(out);
+      if (cl.length) {
+        const c = cl[clipIndexAt(cl, out)];
+        const el = elementFor(c);
+        if (el) el.currentTime = mediaTime(c, out);
+        // Keep the source video parked at the matching spot too.
+        if (isInsert(c) && videoRef.current) videoRef.current.currentTime = toSource(cl, out);
+      }
+      setTime(out);
     },
-    []
+    [elementFor, setTime]
   );
 
   /** Seeking from the timeline (click, drag, or picking a clip/cue) always leaves the player paused. */
   const seekFromTimeline = useCallback(
     (t) => {
-      const el = videoRef.current;
-      if (el && !el.paused) el.pause();
+      setPlaying(false);
       seek(t);
     },
     [seek]
   );
 
   const togglePlay = useCallback(() => {
-    const el = videoRef.current;
-    if (!el) return;
-    if (el.paused) {
+    if (playing) setPlaying(false);
+    else {
       // From the end, start over.
       if (currentTime >= duration - 0.05) seek(0);
-      el.play().catch(() => {});
-    } else el.pause();
-  }, [currentTime, duration, seek]);
+      setPlaying(true);
+    }
+  }, [playing, currentTime, duration, seek]);
 
   const jumpCue = useCallback(
     (dir) => {
@@ -490,7 +587,7 @@ export default function VideoEditor({ video, onChanged, onSaved, onError }) {
   /** Dragging a cue's start/end handle on the timeline. */
   const onCueEdge = (id, edge, phase, t) => {
     if (phase === "begin") {
-      videoRef.current?.pause();
+      setPlaying(false);
       setSelection({ kind: "cue", ids: [id], anchor: id });
       ed.checkpoint();
     } else if (phase === "move") {
@@ -534,38 +631,105 @@ export default function VideoEditor({ video, onChanged, onSaved, onError }) {
   const overlayDrag = useRef(null); // the clip and its track when a move/trim began
   const timelinePps = useRef(100); // the timeline's pixels per second, for snapping distance
 
-  const dropOnTimeline = (item, t) => {
+  /** Material dropped on the timeline: inserted into the main track, added to a track, or on a new track. */
+  const dropOnTimeline = (item, t, target = { mode: "new" }) => {
     if (!editable) return;
+    setPlaying(false);
+    if (target.mode === "main" && item.kind === "video") {
+      const result = insertAt(ed.segments, clips, t, item);
+      ed.apply((s) => ({ ...s, segments: result.segments }));
+      setSelection({ kind: "clip", ids: [result.id], anchor: result.id });
+      seek(result.at, layout(result.segments).clips);
+      return;
+    }
     let added = null;
     ed.apply((s) => {
-      const result = dropMaterial(s.overlays, item, t, duration);
+      const result =
+        target.mode === "track" && s.overlays.some((tr) => tr.id === target.trackId)
+          ? addToTrack(s.overlays, target.trackId, item, target.place)
+          : dropMaterial(s.overlays, item, t, duration);
       added = result.clip;
       return { ...s, overlays: result.overlays };
     });
     if (added) setSelection({ kind: "overlay", ids: [added.id], anchor: added.id });
   };
 
-  const editOverlay = (clipId, mode, phase, value) => {
+  /**
+   * The track under the pointer while moving a clip of `kind`: a track id, "new" (above the top video track, or
+   * below the bottom audio track, like CapCut), or null (stay on its own track).
+   */
+  const trackUnder = (y, kind, drag) => {
+    const rows = [...document.querySelectorAll("[data-drop-row]")].map((el) => ({
+      id: el.dataset.dropRow,
+      kind: el.dataset.dropKind,
+      r: el.getBoundingClientRect(),
+    }));
+    const hit = rows.find((x) => y >= x.r.top && y < x.r.bottom);
+    if (hit) {
+      if (hit.id === "main" || hit.kind !== kind) return null;
+      return String(drag.newTrackId) === hit.id ? "new" : Number(hit.id);
+    }
+    const same = rows.filter((x) => x.kind === kind);
+    if (!same.length) return null;
+    if (kind === "video" && y < Math.min(...same.map((x) => x.r.top))) return "new";
+    if (kind === "audio" && y > Math.max(...same.map((x) => x.r.bottom))) return "new";
+    return null;
+  };
+
+  const editOverlay = (clipId, mode, phase, value, clientY) => {
     if (!editable) return;
     if (phase === "begin") {
       const found = findClip(ed.overlays, clipId);
       if (!found) return;
-      videoRef.current?.pause();
-      overlayDrag.current = { ...found, playhead: currentTime };
+      setPlaying(false);
+      overlayDrag.current = { ...found, overlays: ed.overlays, playhead: currentTime, newTrackId: null };
       ed.checkpoint();
       return;
     }
-    if (phase !== "move" || !overlayDrag.current) {
-      if (phase === "end") overlayDrag.current = null;
+    if (phase === "end") {
+      overlayDrag.current = null;
+      // A track the clip moved off of is gone once the drag ends (kept meanwhile so rows don't jump).
+      ed.preview((s) => (s.overlays.some((t) => !t.clips.length) ? { ...s, overlays: s.overlays.filter((t) => t.clips.length) } : s));
       return;
     }
-    const { track, clip, playhead } = overlayDrag.current;
+    const drag = overlayDrag.current;
+    if (!drag) return;
+    const { track, clip, playhead } = drag;
     // Snap to where the playhead was when the drag began (trimming moves the playhead along with the edge).
-    const points = snapPoints(ed.overlays, clips, playhead, clipId);
+    const points = snapPoints(drag.overlays, clips, playhead, clipId);
     const threshold = 8 / Math.max(timelinePps.current, 1e-6); // 8 px
-    const next = dragClip(track, clip, mode, value, duration, points, threshold);
-    ed.preview((s) => ({ ...s, overlays: updateClip(s.overlays, clipId, () => next) }));
-    if (mode !== "move") seek(mode === "start" ? next.start : clipEnd(next)); // show the frame at the edge
+    if (mode !== "move") {
+      const next = dragClip(track, clip, mode, value, duration, points, threshold);
+      ed.preview((s) => ({ ...s, overlays: updateClip(s.overlays, clipId, () => next) }));
+      seek(mode === "start" ? next.start : clipEnd(next)); // show the frame at the edge
+      return;
+    }
+    // Moving: along its track, or onto another track of its kind (or a new one) when dragged up/down.
+    const base = drag.overlays.map((t) => (t.id === track.id ? { ...t, clips: t.clips.filter((c) => c.id !== clipId) } : t));
+    let dest = clientY == null ? null : trackUnder(clientY, track.kind, drag);
+    let target = null;
+    let next = null;
+    if (dest !== null && dest !== track.id) {
+      if (dest === "new") {
+        drag.newTrackId ??= uid();
+        target = { id: drag.newTrackId, kind: track.kind, muted: track.muted, clips: [] };
+      } else target = base.find((t) => t.id === dest);
+      if (target) {
+        next = dragClip({ clips: [] }, clip, "move", value, duration, points, threshold);
+        const overlaps = target.clips.some((c) => next.start < clipEnd(c) - 1e-6 && clipEnd(next) > c.start + 1e-6);
+        if (overlaps) target = null; // no room there: stay on its own track
+      }
+    }
+    if (!target) {
+      dest = track.id;
+      target = base.find((t) => t.id === track.id);
+      next = dragClip(track, clip, "move", value, duration, points, threshold);
+    }
+    const placed = { ...target, clips: [...target.clips, next].sort((a, b) => a.start - b.start) };
+    const overlays = base.some((t) => t.id === placed.id)
+      ? base.map((t) => (t.id === placed.id ? placed : t))
+      : [...base, placed]; // a new track: video tracks stack on top, audio tracks at the bottom
+    ed.preview((s) => ({ ...s, overlays }));
   };
 
   const toggleTrackMute = (trackId) =>
@@ -748,14 +912,26 @@ export default function VideoEditor({ video, onChanged, onSaved, onError }) {
             muted={muted}
             onLoadedMetadata={(e) => {
               setSourceDuration(e.currentTarget.duration);
-              if (clipsRef.current.length) e.currentTarget.currentTime = clipsRef.current[0].start;
+              if (clipsRef.current.length) e.currentTarget.currentTime = toSource(clipsRef.current, timeRef.current);
             }}
-            onPlay={() => setPlaying(true)}
-            onPause={() => setPlaying(false)}
-            onEnded={() => setPlaying(false)}
-            onTimeUpdate={(e) => !playing && setCurrentTime(toOutput(clipsRef.current, e.currentTarget.currentTime))}
-            style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "contain",
+              display: "block",
+              visibility: inInsert ? "hidden" : "visible",
+            }}
           />
+          {clips.filter(isInsert).map((c) => (
+            <MainInsertMedia
+              key={c.id}
+              clip={c}
+              time={currentTime}
+              playing={playing}
+              muted={muted}
+              register={registerInsert}
+            />
+          ))}
           {ed.overlays.map((track) =>
             track.clips.map((c) => (
               <OverlayMedia

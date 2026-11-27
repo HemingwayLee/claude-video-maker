@@ -364,11 +364,20 @@ def save_edit(video_id: int, payload: schemas.VideoEdit, db: Session = Depends(g
                 raise HTTPException(400, "Keep at least one part of the video")
             limit = (video.duration_s or float("inf")) + 0.5
             prev_end = 0.0
-            for start, end in segments:
+            saved = []
+            for seg in segments:
+                if isinstance(seg, schemas.MainInsert):  # material on the main track
+                    media_limit = (seg.source_duration or float("inf")) + 0.5
+                    if seg.end - seg.start < MIN_LENGTH - 1e-6 or seg.end > media_limit:
+                        raise HTTPException(400, "An inserted clip must lie within its media")
+                    saved.append(seg.model_dump() | {"start": round(seg.start, 3), "end": round(seg.end, 3)})
+                    continue
+                start, end = seg
                 if start < prev_end - 1e-3 or end - start < MIN_LENGTH - 1e-6 or end > limit:
                     raise HTTPException(400, "Segments must be in order, not overlap, and lie within the video")
                 prev_end = end
-            segments = [[round(s, 3), round(e, 3)] for s, e in segments]
+                saved.append([round(start, 3), round(end, 3)])
+            segments = saved
         video.segments = segments
 
     if "overlays" in data:

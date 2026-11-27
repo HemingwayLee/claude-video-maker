@@ -12,7 +12,7 @@ const CLICK_PX = 3; // less movement than this is a click, not a drag
 const colour = (kind, alpha) =>
   `rgba(var(--mui-palette-${kind === "video" ? "secondary" : "success"}-mainChannel) / ${alpha})`;
 
-const thumbnailOf = (source) =>
+export const thumbnailOf = (source) =>
   source.type === "animation" ? animationsApi.thumbnailUrl(source.id) : materialsApi.thumbnailUrl(source.id);
 
 /** Left-column label for an extra track: its name and a mute switch. */
@@ -80,13 +80,17 @@ function Edge({ side, onDrag }) {
 }
 
 /**
- * One extra track's row of clips. Drag a clip to move it, drag its edges to trim; click selects it.
- * `onEdit(clipId, mode: "move" | "start" | "end", phase: "begin" | "move" | "end", value)` where value is
- * the drag distance in seconds for "move" and the edge's time for "start"/"end".
+ * One extra track's row of clips. Drag a clip to move it (also up/down onto another track), drag its edges to
+ * trim; click selects it. `onEdit(clipId, mode: "move" | "start" | "end", phase: "begin" | "move" | "end", value,
+ * clientY)` where value is the drag distance in seconds for "move" and the edge's time for "start"/"end".
  */
 export function OverlayTrackRow({ track, pps, timeAt, selectedIds, onSelect, onEdit }) {
   return (
-    <Box sx={{ position: "relative", height: OVERLAY_H, borderBottom: 1, borderColor: "divider", bgcolor: colour(track.kind, 0.04) }}>
+    <Box
+      data-drop-row={track.id}
+      data-drop-kind={track.kind}
+      sx={{ position: "relative", height: OVERLAY_H, borderBottom: 1, borderColor: "divider", bgcolor: colour(track.kind, 0.04) }}
+    >
       {track.clips.map((c) => (
         <OverlayClip
           key={c.id}
@@ -105,7 +109,6 @@ export function OverlayTrackRow({ track, pps, timeAt, selectedIds, onSelect, onE
 }
 
 function OverlayClip({ clip, kind, muted, pps, timeAt, selected, onSelect, onEdit }) {
-  const drag = useRef(null); // {x, t, moved}
   const width = Math.max(clip.duration * pps - 1, 3);
   return (
     <Box
@@ -113,27 +116,26 @@ function OverlayClip({ clip, kind, muted, pps, timeAt, selected, onSelect, onEdi
       onPointerDown={(e) => {
         if (e.button !== 0) return;
         e.stopPropagation();
-        e.currentTarget.setPointerCapture(e.pointerId);
-        drag.current = { x: e.clientX, t: timeAt(e.clientX), moved: false };
         onSelect(clip.id);
-      }}
-      onPointerMove={(e) => {
-        const d = drag.current;
-        if (!d) return;
-        if (!d.moved && Math.abs(e.clientX - d.x) < CLICK_PX) return;
-        if (!d.moved) {
-          d.moved = true;
-          onEdit(clip.id, "move", "begin", 0);
-        }
-        onEdit(clip.id, "move", "move", timeAt(e.clientX) - d.t);
-      }}
-      onPointerUp={() => {
-        if (drag.current?.moved) onEdit(clip.id, "move", "end", 0);
-        drag.current = null;
-      }}
-      onPointerCancel={() => {
-        if (drag.current?.moved) onEdit(clip.id, "move", "end", 0);
-        drag.current = null;
+        // Follow the drag on the window: moving to another track re-mounts this clip in that track's row.
+        const d = { x: e.clientX, t: timeAt(e.clientX), moved: false };
+        const move = (ev) => {
+          if (!d.moved && Math.abs(ev.clientX - d.x) < CLICK_PX && Math.abs(ev.clientY - e.clientY) < CLICK_PX) return;
+          if (!d.moved) {
+            d.moved = true;
+            onEdit(clip.id, "move", "begin", 0);
+          }
+          onEdit(clip.id, "move", "move", timeAt(ev.clientX) - d.t, ev.clientY);
+        };
+        const up = () => {
+          if (d.moved) onEdit(clip.id, "move", "end", 0);
+          window.removeEventListener("pointermove", move);
+          window.removeEventListener("pointerup", up);
+          window.removeEventListener("pointercancel", up);
+        };
+        window.addEventListener("pointermove", move);
+        window.addEventListener("pointerup", up);
+        window.addEventListener("pointercancel", up);
       }}
       title={clip.name}
       sx={{

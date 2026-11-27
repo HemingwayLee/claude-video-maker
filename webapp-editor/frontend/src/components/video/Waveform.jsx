@@ -41,6 +41,7 @@ export default function Waveform({ scrollRef, viewW, pps, clips, peaks, rate, he
         while (ci < clips.length - 1 && t >= clips[ci].outEnd) ci++;
         const c = clips[ci];
         if (t >= c.outEnd) break; // past the end of the edit
+        if (c.source) continue; // inserted material: not the source video's audio
         const src = c.start + (t - c.outStart);
         const srcEnd = Math.min(src + secPerPx, c.end);
         const i0 = Math.floor(src * rate);
@@ -52,7 +53,7 @@ export default function Waveform({ scrollRef, viewW, pps, clips, peaks, rate, he
         ctx.fillRect(x, mid - h, 1, h * 2);
       }
 
-      // Gaps where the video was split.
+      // Gaps where the video was split (and around inserted material).
       ctx.globalAlpha = 1;
       for (let k = 1; k < clips.length; k++) {
         const x = clips[k].outStart * pps - left;

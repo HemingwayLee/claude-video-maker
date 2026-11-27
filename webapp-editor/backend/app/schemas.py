@@ -69,7 +69,7 @@ class VideoRead(BaseModel):
     progress: float | None = None
     # What's happening right now while downloading or transcribing, for the UI.
     stage: str | None = None
-    segments: list[list[float]] | None = None
+    segments: list[list[float] | dict] | None = None  # [start, end] of the source, or an inserted material
     overlays: list[dict[str, Any]] | None = None
     # True when the subtitles were edited in the editor (the original is kept, for Reset).
     subtitles_edited: bool = False
@@ -116,11 +116,23 @@ class OverlayTrack(BaseModel):
     clips: list[OverlayClip] = Field(default_factory=list, max_length=500)
 
 
+class MainInsert(BaseModel):
+    """Material placed on the main track between parts of the source video: `start`-`end` of its media."""
+
+    start: float = Field(ge=0)
+    end: float = Field(gt=0)
+    source: OverlaySource
+    name: str = Field(default="", max_length=300)
+    kind: Literal["video"] = "video"
+    source_duration: float | None = Field(default=None, gt=0)
+
+
 class VideoEdit(BaseModel):
     """Editor state to save. Omitted fields are left as they are."""
 
-    # Kept parts of the source video, in source time; null resets to the whole video.
-    segments: list[tuple[float, float]] | None = Field(default=None, max_length=5000)
+    # The main track, in order: kept parts of the source video ([start, end], source time) and material
+    # inserted between them (MainInsert); null resets to the whole video.
+    segments: list[tuple[float, float] | MainInsert] | None = Field(default=None, max_length=5000)
     # The full, edited subtitle list (source time). Rewrites subtitles.srt; the first edit keeps the original.
     cues: list[Cue] | None = Field(default=None, max_length=20000)
     # The extra tracks (timeline time); [] removes them all.

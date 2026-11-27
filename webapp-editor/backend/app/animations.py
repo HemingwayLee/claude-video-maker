@@ -194,7 +194,7 @@ def delete_animation(animation_id: int, db: Session = Depends(get_db)):
 
 def _kept_pieces(segments: list[list[float]] | None, duration: float, a: float, b: float) -> list[tuple[float, float]]:
     """The parts of [a, b] (source seconds) that the video's timeline edit keeps, in order."""
-    kept = segments or [[0.0, duration]]
+    kept = [seg for seg in segments or [] if isinstance(seg, list)] or [[0.0, duration]]  # source parts only
     return [(max(a, s), min(b, e)) for s, e in kept if min(b, e) - max(a, s) > 0.01]
 
 

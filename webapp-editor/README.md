@@ -25,6 +25,14 @@ A web UI for talking to Claude Code, built on the same stack as `info-center`:
   playhead, delete, mute a track, undo/redo; clips snap to the playhead and other clip edges. The player plays the
   tracks in sync (video tracks cover the main picture). Tracks are saved in `videos.overlays` with the rest of the
   edit (`src/video/overlays.js`, `components/video/OverlayTrack.jsx`).
+  Where you drop decides where it goes, as in CapCut: on an extra track of the same kind it joins that track (if
+  there's room; otherwise it gets a new track); on the main Video row a video is inserted at the nearest clip
+  edge and everything after it moves later. Inserted clips are part of the main sequence (`videos.segments` holds
+  `[start, end]` for source parts and an object for inserted material); they split, delete and export like the
+  source parts, and the player switches between the source video and the inserted media as it plays.
+  Clips on extra tracks can be dragged up or down onto another track of the same kind (V2 ↔ V3, A2 ↔ A3) when
+  there's room; dragging above the top video track (or below the bottom audio track) makes a new track, and a
+  track left empty disappears when the drag ends.
   The right panel's **Export** tab renders the edited timeline with ffmpeg (`backend/app/exports.py`, one render
   at a time): an MP4 with sound (kept parts joined, extra tracks overlaid and mixed, subtitles optionally burnt
   in), or the audio alone (MP3/M4A/WAV). Renders go to a temporary folder in the backend container (never the

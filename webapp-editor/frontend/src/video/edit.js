@@ -1,13 +1,18 @@
 /**
- * Timeline editing maths. The edit keeps `segments` of the source video, in order: [{id, start, end}] in
- * source seconds. Removed parts close up (ripple), so the timeline shows "output" time: segment i starts at
- * the summed length of the segments before it. Subtitle cues stay in source time; they are mapped for display.
+ * Timeline editing maths. The main track is `segments`, in order: kept parts of the source video
+ * ({id, start, end} in source seconds) and Material inserted between them ({id, start, end, source, name, kind,
+ * source_duration}, start/end being times in that material). Removed parts close up (ripple), so the timeline
+ * shows "output" time: segment i starts at the summed length of the segments before it. Subtitle cues stay in
+ * source time; they are mapped for display through the source parts only.
  */
 
 export const MIN_LENGTH = 0.05; // shortest clip or cue, seconds (matches the backend)
 
 let nextId = 1;
 export const newSegment = (start, end) => ({ id: nextId++, start, end });
+
+/** True for Material inserted on the main track (not a part of the source video). */
+export const isInsert = (c) => !!c.source;
 
 /** Segments with their output-time placement, plus the total output duration. */
 export function layout(segments) {
@@ -22,11 +27,14 @@ export function layout(segments) {
 
 /** Output time for a source time; a time inside a removed part maps to where that cut is. */
 export function toOutput(clips, src) {
+  let lastEnd = 0;
   for (const c of clips) {
+    if (isInsert(c)) continue;
+    lastEnd = c.outEnd;
     if (src < c.start) return c.outStart;
     if (src <= c.end) return c.outStart + (src - c.start);
   }
-  return clips.length ? clips[clips.length - 1].outEnd : 0;
+  return lastEnd;
 }
 
 /** Index of the clip at output time t (the last one at the very end). */
@@ -35,11 +43,19 @@ export function clipIndexAt(clips, t) {
   return i === -1 ? clips.length - 1 : i;
 }
 
-/** Source time for an output time. */
+/** Media time for an output time, within the clip there (source video or inserted material). */
+export function mediaTime(c, t) {
+  return c.start + Math.min(Math.max(t - c.outStart, 0), c.end - c.start);
+}
+
+/** Source time for an output time. Inside inserted material: where the source video stopped before it. */
 export function toSource(clips, t) {
   if (!clips.length) return 0;
-  const c = clips[clipIndexAt(clips, Math.max(0, t))];
-  return c.start + Math.min(Math.max(t - c.outStart, 0), c.end - c.start);
+  const i = clipIndexAt(clips, Math.max(0, t));
+  if (!isInsert(clips[i])) return mediaTime(clips[i], t);
+  for (let k = i - 1; k >= 0; k--) if (!isInsert(clips[k])) return clips[k].end;
+  const next = clips.slice(i + 1).find((c) => !isInsert(c));
+  return next ? next.start : 0;
 }
 
 /** Where a cue shows on the timeline (output time), or null when it is entirely in removed parts. */
@@ -47,6 +63,7 @@ export function cueSpan(clips, cue) {
   let first = null;
   let last = null;
   for (const c of clips) {
+    if (isInsert(c)) continue;
     const a = Math.max(cue.start, c.start);
     const b = Math.min(cue.end, c.end);
     if (b - a > 1e-6) {
@@ -64,8 +81,52 @@ export function splitAt(segments, clips, t) {
   if (!c) return segments;
   const src = c.start + (t - c.outStart);
   if (src - c.start < MIN_LENGTH || c.end - src < MIN_LENGTH) return segments;
-  return [...segments.slice(0, i), newSegment(c.start, src), newSegment(src, c.end), ...segments.slice(i + 1)];
+  const seg = segments[i];
+  return [
+    ...segments.slice(0, i),
+    { ...seg, id: nextId++, end: src },
+    { ...seg, id: nextId++, start: src },
+    ...segments.slice(i + 1),
+  ];
 }
+
+/**
+ * Insert a Material item (video) into the main track at the clip edge nearest to output time t, like dropping
+ * on CapCut's main track. Returns {segments, at} where `at` is the new clip's output start.
+ */
+export function insertAt(segments, clips, t, item) {
+  let i = clips.length;
+  if (clips.length) {
+    const k = clipIndexAt(clips, t);
+    const c = clips[k];
+    i = t < (c.outStart + c.outEnd) / 2 ? k : k + 1;
+  }
+  const length = Math.max(MIN_LENGTH, item.duration || 5);
+  const seg = {
+    id: nextId++,
+    start: 0,
+    end: length,
+    source: item.source,
+    name: item.name,
+    kind: "video",
+    source_duration: item.duration || null,
+  };
+  return {
+    segments: [...segments.slice(0, i), seg, ...segments.slice(i)],
+    at: i < clips.length ? clips[i].outStart : clips.length ? clips[clips.length - 1].outEnd : 0,
+    id: seg.id,
+  };
+}
+
+/** A main-track segment as the server stores it: [start, end] for the source, an object for inserted material. */
+export const segmentToSave = (s) =>
+  isInsert(s)
+    ? { start: s.start, end: s.end, source: s.source, name: s.name, kind: s.kind || "video", source_duration: s.source_duration }
+    : [s.start, s.end];
+
+/** A saved main-track segment back into editor form. */
+export const segmentFromSaved = (s) =>
+  Array.isArray(s) ? newSegment(s[0], s[1]) : { ...s, id: nextId++ };
 
 /**
  * Split a cue's text at `caret` into two cues, dividing its time in proportion to the characters on each

@@ -131,5 +131,39 @@ export function dropMaterial(overlays, item, t, total) {
   return { overlays: [...overlays, track], clip };
 }
 
+/**
+ * Where a dropped item would go on an existing track at time t: {start, duration}, or null when the gap there
+ * is too small (then it gets a new track, like CapCut).
+ */
+export function placeOnTrack(track, item, t, total) {
+  const length = Math.min(item.duration || 5, total);
+  let lo = 0;
+  let hi = total;
+  for (const c of track.clips) {
+    if (t >= c.start && t < clipEnd(c)) return null; // dropped onto a clip
+    if (clipEnd(c) <= t) lo = Math.max(lo, clipEnd(c));
+    else hi = Math.min(hi, c.start);
+  }
+  if (hi - lo < length - 1e-6) return null;
+  return { start: Math.min(Math.max(t, lo), hi - length), duration: length };
+}
+
+/** Add a dropped item to an existing track at `place` (from placeOnTrack). */
+export function addToTrack(overlays, trackId, item, place) {
+  const clip = {
+    id: uid(),
+    source: item.source,
+    name: item.name,
+    start: place.start,
+    in: 0,
+    duration: Math.max(MIN_LENGTH, place.duration),
+    source_duration: item.duration || null,
+  };
+  const next = overlays.map((t) =>
+    t.id === trackId ? { ...t, clips: [...t.clips, clip].sort((a, b) => a.start - b.start) } : t
+  );
+  return { overlays: next, clip };
+}
+
 // What is being dragged from the Material tab (dataTransfer can't be read during dragover).
 export const materialDrag = { current: null };

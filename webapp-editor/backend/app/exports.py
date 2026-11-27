@@ -79,17 +79,23 @@ def parse_srt(text: str) -> list[tuple[float, float, str]]:
     return cues
 
 
-def _segments(video: models.Video) -> list[tuple[float, float]]:
+def _segments(video: models.Video) -> list[tuple[float, float, dict | None]]:
+    """The main track in order: (start, end, None) for a kept part of the source video, or
+    (start, end, insert) for material placed on the main track (start/end are times in that material)."""
     if video.segments:
-        return [(float(s), float(e)) for s, e in video.segments]
-    return [(0.0, float(video.duration_s or 0))]
+        return [
+            (float(seg["start"]), float(seg["end"]), seg) if isinstance(seg, dict) else (float(seg[0]), float(seg[1]), None)
+            for seg in video.segments
+        ]
+    return [(0.0, float(video.duration_s or 0), None)]
 
 
 def edited_cues(video: models.Video, cues: list[tuple[float, float, str]]) -> list[tuple[float, float, str]]:
     """Cues moved to the edited timeline: cut parts removed, a cue spanning a cut runs across the join."""
     clips, out = [], 0.0
-    for s, e in _segments(video):
-        clips.append((s, e, out))
+    for s, e, insert in _segments(video):
+        if insert is None:
+            clips.append((s, e, out))
         out += e - s
     result = []
     for start, end, text in cues:
@@ -182,46 +188,71 @@ def _build_command(db: Session, video: models.Video, request: ExportRequest, fol
     if want_video and "width" not in info:
         raise ValueError("The source has no video stream")
     segments = _segments(video)
-    total = sum(e - s for s, e in segments)
+    total = sum(e - s for s, e, _ in segments)
     if total <= 0:
         raise ValueError("Nothing left to export")
+    if want_video:
+        w, h, fps = info["width"], info["height"], info["fps"]
+        # Every piece of the main track gets the same frame size, rate and pixel format, so they can be joined.
+        norm = (
+            f"scale={w}:{h}:force_original_aspect_ratio=decrease,pad={w}:{h}:(ow-iw)/2:(oh-ih)/2:color=black,"
+            f"setsar=1,fps={fps},format=yuv420p"
+        )
+    audio_norm = f"aresample={SAMPLE_RATE},aformat=sample_fmts=fltp:channel_layouts=stereo"
 
     inputs = ["-i", str(src)]
     graph: list[str] = []
     notes: list[str] = []
+    missing = 0
+    k = 1  # next ffmpeg input index
+
+    # The main track: kept parts of the source and inserted material, joined end to end.
+    parts = []
+    for i, (s, e, insert) in enumerate(segments):
+        length = e - s
+        silence = f"anullsrc=r={SAMPLE_RATE}:cl=stereo,atrim=duration={length:.3f},{audio_norm}[a{i}]"
+        if insert is None:
+            if want_video:
+                graph.append(f"[0:v]trim=start={s:.3f}:end={e:.3f},setpts=PTS-STARTPTS,{norm}[v{i}]")
+            if info["audio"]:
+                graph.append(f"[0:a]atrim=start={s:.3f}:end={e:.3f},asetpts=PTS-STARTPTS,{audio_norm}[a{i}]")
+            else:
+                graph.append(silence)
+        else:
+            path = _media_path(db, insert.get("source") or {})
+            media = _probe(path) if path and path.exists() else None
+            if media is None:
+                missing += 1
+                if want_video:
+                    graph.append(f"color=c=black:s={w}x{h}:r={fps}:d={length:.3f},format=yuv420p,setsar=1[v{i}]")
+                graph.append(silence)
+            else:
+                inputs += ["-ss", f"{s:.3f}", "-t", f"{length:.3f}", "-i", str(path)]
+                if want_video:
+                    if "width" in media:
+                        # Hold the last frame if the media is a little shorter than its slot.
+                        graph.append(
+                            f"[{k}:v]setpts=PTS-STARTPTS,{norm},tpad=stop_mode=clone:stop_duration={length:.3f},"
+                            f"trim=duration={length:.3f}[v{i}]"
+                        )
+                    else:
+                        graph.append(f"color=c=black:s={w}x{h}:r={fps}:d={length:.3f},format=yuv420p,setsar=1[v{i}]")
+                if media["audio"]:
+                    graph.append(
+                        f"[{k}:a]asetpts=PTS-STARTPTS,{audio_norm},apad=whole_dur={length:.3f},"
+                        f"atrim=duration={length:.3f}[a{i}]"
+                    )
+                else:
+                    graph.append(silence)
+                k += 1
+        parts.append((f"[v{i}]" if want_video else "") + f"[a{i}]")
     n = len(segments)
+    graph.append(f"{''.join(parts)}concat=n={n}:v={1 if want_video else 0}:a=1" + ("[base0][main_a]" if want_video else "[main_a]"))
 
-    # The main video: kept parts joined end to end.
-    parts = ""
-    for i, (s, e) in enumerate(segments):
-        if want_video:
-            graph.append(f"[0:v]trim=start={s:.3f}:end={e:.3f},setpts=PTS-STARTPTS[v{i}]")
-            parts += f"[v{i}]"
-        if info["audio"]:
-            graph.append(
-                f"[0:a]atrim=start={s:.3f}:end={e:.3f},asetpts=PTS-STARTPTS,"
-                f"aresample={SAMPLE_RATE},aformat=channel_layouts=stereo[a{i}]"
-            )
-            parts += f"[a{i}]"
-    if want_video and info["audio"]:
-        graph.append(f"{parts}concat=n={n}:v=1:a=1[base][main_a]")
-    elif want_video:
-        graph.append(f"{parts}concat=n={n}:v=1:a=0[base]")
-    elif info["audio"]:
-        graph.append(f"{parts}concat=n={n}:v=0:a=1[main_a]")
-    if not info["audio"]:
-        graph.append(f"anullsrc=r={SAMPLE_RATE}:cl=stereo,atrim=duration={total:.3f}[main_a]")
-
-    v_label, mix = "base", ["[main_a]"]
-    if want_video:
-        w, h, fps = info["width"], info["height"], info["fps"]
-        graph.append(f"[base]fps={fps},scale={w}:{h},setsar=1[base0]")
-        v_label = "base0"
+    v_label, mix = "base0", ["[main_a]"]
 
     # Extra tracks, in timeline order of the list (a later video track draws on top, as in the player).
     if request.include_tracks:
-        k = 1
-        missing = 0
         for track in video.overlays or []:
             for clip in track.get("clips", []):
                 start = float(clip["start"])
@@ -260,8 +291,8 @@ def _build_command(db: Session, video: models.Video, request: ExportRequest, fol
                     )
                     mix.append(f"[oa{k}]")
                 k += 1
-        if missing:
-            notes.append(f"Skipped {missing} clip{'s' if missing > 1 else ''} whose material was deleted.")
+    if missing:
+        notes.append(f"Skipped {missing} clip{'s' if missing > 1 else ''} whose material was deleted (black/silent).")
 
     if len(mix) > 1:
         graph.append(f"{''.join(mix)}amix=inputs={len(mix)}:duration=first:normalize=0[aout]")

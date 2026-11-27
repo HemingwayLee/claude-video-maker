@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { videosApi } from "../api";
-import { MIN_LENGTH, newSegment } from "./edit";
+import { MIN_LENGTH, newSegment, segmentFromSaved, segmentToSave } from "./edit";
 
 const HISTORY = 100;
 const SAVE_DELAY = 700;
@@ -29,7 +29,7 @@ export default function useVideoEdit({ video, sourceDuration, loadedCues, onSave
   useEffect(() => {
     if (stateRef.current.segments || !sourceDuration) return;
     const segments = video.segments?.length
-      ? video.segments.map(([s, e]) => newSegment(s, e))
+      ? video.segments.map(segmentFromSaved)
       : [newSegment(0, sourceDuration)];
     stateRef.current = { ...stateRef.current, segments };
     setState(stateRef.current);
@@ -48,7 +48,7 @@ export default function useVideoEdit({ video, sourceDuration, loadedCues, onSave
     timer.current = null;
     const body = {};
     const { segments, cues } = stateRef.current;
-    if (dirty.current.segments && segments) body.segments = segments.map((s) => [s.start, s.end]);
+    if (dirty.current.segments && segments) body.segments = segments.map(segmentToSave);
     if (dirty.current.cues) body.cues = cues.map(({ start, end, text }) => ({ start, end, text }));
     if (dirty.current.overlays) body.overlays = stateRef.current.overlays;
     dirty.current = { segments: false, cues: false, overlays: false };
